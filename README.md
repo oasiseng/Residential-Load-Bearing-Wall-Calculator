@@ -29,7 +29,7 @@ A simple, web-based tool to estimate stud requirements for residential load-bear
 
 ## Demo
 
-You can try the calculator live [here](https://yourusername.github.io/residential-calculators/) (replace with your GitHub Pages link if hosted).
+You can try the calculator live [here](https://oasisengineering.com/res-wood-wall-bearing-calculator/).
 
 ## Installation
 
