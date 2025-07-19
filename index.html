@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IRC 2021 Residential Load-Bearing Wall Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .instructions, .input-form, .results, .disclaimer, .capacity-table {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .instructions {
+      background-color: #e8f4fd;
+      border-color: #b3d9ff;
+    }
+    .input-form label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      position: relative;
+    }
+    .help-icon { cursor: help; color: #007BFF; font-size: 0.9em; margin-left: 5px; }
+    .input-form input, .input-form select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-right: 10px;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .results {
+      display: none;
+    }
+    .capacity-table table, .results table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .capacity-table th, .capacity-table td, .results th, .results td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .status-pass {
+      color: #27ae60;
+      font-weight: bold;
+    }
+    .status-fail {
+      color: #c0392b;
+      font-weight: bold;
+    }
+    .disclaimer {
+      font-size: 0.9em;
+      color: #555;
+      text-align: center;
+      border: none;
+      background-color: #ffe6e6;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .error {
+      color: red;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+    @media (max-width: 600px) {
+      .container { padding: 10px; }
+      .input-form input, .input-form select { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>IRC 2021 Residential Load-Bearing Wall Calculator</h1>
+
+    <!-- Instructions -->
+    <div class="instructions">
+      <h2>How to Use This Calculator</h2>
+      <p>This tool estimates required stud size for load-bearing walls based on IRC 2021 and NDS 2018 (referenced for wood design). Follow these steps:</p>
+      <ol>
+        <li><strong>Wall Height</strong>: Enter height in feet (max 12ft per IRC; >12ft requires engineering).</li>
+        <li><strong>Supported Load</strong>: Enter total axial load from above in plf (pounds per linear foot).</li>
+        <li><strong>Stud Spacing</strong>: Select spacing in inches on center.</li>
+        <li><strong>Wood Species</strong>: Choose species and grade (No. 2).</li>
+        <li><strong>Wall Type</strong>: Select interior (axial only) or exterior (conservative wind adjustment).</li>
+        <li>Click "Calculate" to see results.</li>
+      </ol>
+      <p><strong>Note</strong>: Assumes single-story, typical conditions, axial loads only for interior; exterior reduces capacity ~20% for bending (simplified; actual wind calc needed). Capacities calculated dynamically per NDS.</p>
+      <p><strong>Blocking Recommendation</strong>: For walls >8ft, add mid-height blocking for stability per IRC.</p>
+    </div>
+
+    <!-- Input Form -->
+    <div class="input-form">
+      <label for="wallHeight">Wall Height (ft): <span class="help-icon" title="Unsupported height; IRC max 12ft with exceptions.">?</span></label>
+      <input type="number" id="wallHeight" min="1" max="20" step="0.1" aria-required="true">
+
+      <label for="supportedLoad">Supported Load (plf): <span class="help-icon" title="Total dead + live load from above per linear foot of wall.">?</span></label>
+      <input type="number" id="supportedLoad" min="0" step="1" aria-required="true">
+
+      <label for="studSpacing">Stud Spacing (in): <span class="help-icon" title="On center; per IRC Table R602.3(5).">?</span></label>
+      <select id="studSpacing" aria-required="true">
+        <option value="12">12</option>
+        <option value="16" selected>16</option>
+        <option value="24">24</option>
+      </select>
+
+      <label for="woodSpecies">Wood Species and Grade: <span class="help-icon" title="No. 2 grade per NDS 2018.">?</span></label>
+      <select id="woodSpecies" aria-required="true">
+        <option value="DouglasFirLarch2" selected>Douglas Fir-Larch No. 2</option>
+        <option value="SouthernPine2">Southern Pine No. 2</option>
+        <option value="HemFir2">Hem-Fir No. 2</option>
+      </select>
+
+      <label for="wallType">Wall Type: <span class="help-icon" title="Interior: Axial only; Exterior: Reduced for wind bending (conservative).">?</span></label>
+      <select id="wallType">
+        <option value="interior" selected>Interior (Axial Load Only)</option>
+        <option value="exterior">Exterior (With Wind Adjustment)</option>
+      </select>
+
+      <button id="calculateBtn">Calculate</button>
+      <button id="resetBtn">Reset</button>
+      <p id="errorMessage" class="error" style="display:none;"></p>
+    </div>
+
+    <!-- Capacity Table (for reference at 10ft height) -->
+    <div id="capacityTableDiv" class="capacity-table">
+      <h2>Reference Stud Capacity Table at 10ft Height (plf)</h2>
+      <table id="capacityTable">
+        <thead>
+          <tr>
+            <th>Stud Size</th>
+            <th>12" Spacing</th>
+            <th>16" Spacing</th>
+            <th>24" Spacing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows populated by JS -->
+        </tbody>
+      </table>
+      <p class="note">Capacities calculated per NDS 2018 (axial only; adjust for actual height in results).</p>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="results">
+      <h2>Results</h2>
+      <table>
+        <tr><th>Required Stud Size</th><td id="studSize"></td></tr>
+        <tr><th>Maximum Allowable Load per Stud (lbs)</th><td id="maxLoadPerStud"></td></tr>
+        <tr><th>Load per Stud (lbs)</th><td id="loadPerStud"></td></tr>
+        <tr><th>Maximum Allowable Wall Load (plf)</th><td id="maxWallLoad"></td></tr>
+        <tr><th>Status</th><td id="status"></td></tr>
+      </table>
+      <div id="blockingNote" style="display:none; margin-top:10px; font-style: italic; color: #555;">
+        Note: For walls taller than 8 ft, add mid-height blocking for stability.
+      </div>
+      <div id="heightWarning" style="display:none; margin-top:10px; color: #c0392b;">
+        Warning: Heights >12 ft exceed IRC prescriptive limits; consult engineer.
+      </div>
+      <p class="note">Results based on NDS 2018 axial capacity (Cp adjusted for height). For exterior walls, a conservative 20% reduction applied for bending; verify wind loads separately.</p>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      <p><em>Disclaimer: This tool provides estimates based on IRC 2021 and NDS 2018. It assumes axial loads; lateral/wind/seismic must be checked separately. For design, consult a licensed structural engineer. Verify with official IRC tables (e.g., R602.3(5) for prescriptive limits).</em></p>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // Wood data from NDS 2018 Supplement (Fc in psi, Emin in psi, Area in sq in by size)
+    const woodData = {
+      DouglasFirLarch2: { Fc: 1500, Emin: 620000 },
+      SouthernPine2: { Fc: 1650, Emin: 510000 },
+      HemFir2: { Fc: 1300, Emin: 470000 }
+    };
+    const studSizes = ["2x4", "2x6", "2x8", "2x10"]; // Added 2x10
+    const studDims = {
+      "2x4": { area: 5.25, d: 3.5 },
+      "2x6": { area: 8.25, d: 5.5 },
+      "2x8": { area: 10.875, d: 7.25 },
+      "2x10": { area: 14.0, d: 9.25 }
+    };
+
+    // Function to calculate Cp (column stability factor)
+    function calculateCp(heightFt, d, Fc, Emin) {
+      const le = heightFt * 12; // inches
+      const KcE = 0.822;
+      const c = 0.8;
+      const FcE = KcE * Emin / Math.pow(le / d, 2);
+      const ratio = FcE / Fc;
+      const a = (1 + ratio) / (2 * c);
+      const b = Math.sqrt(a * a - ratio / c);
+      return a - b;
+    }
+
+    // Update reference capacity table (at 10ft height, axial only)
+    function updateCapacityTable() {
+      const woodSpecies = document.getElementById('woodSpecies').value;
+      const { Fc, Emin } = woodData[woodSpecies];
+      const tableBody = document.querySelector("#capacityTable tbody");
+      tableBody.innerHTML = "";
+
+      studSizes.forEach(size => {
+        const row = document.createElement("tr");
+        const sizeCell = document.createElement("td");
+        sizeCell.textContent = size;
+        row.appendChild(sizeCell);
+
+        ["12", "16", "24"].forEach(spacingStr => {
+          const spacing = parseFloat(spacingStr);
+          const spacingFt = spacing / 12;
+          const { area, d } = studDims[size];
+          const Cp = calculateCp(10, d, Fc, Emin); // At 10ft
+          const maxLoadPerStud = Fc * area * Cp;
+          const maxPlf = maxLoadPerStud / spacingFt;
+          const cell = document.createElement("td");
+          cell.textContent = Math.round(maxPlf);
+          row.appendChild(cell);
+        });
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Calculate required stud size
+    function calculateWallCapacity() {
+      const wallHeight = parseFloat(document.getElementById('wallHeight').value);
+      const supportedLoad = parseFloat(document.getElementById('supportedLoad').value);
+      const studSpacingStr = document.getElementById('studSpacing').value;
+      const studSpacing = parseFloat(studSpacingStr);
+      const spacingFt = studSpacing / 12;
+      const woodSpecies = document.getElementById('woodSpecies').value;
+      const wallType = document.getElementById('wallType').value;
+      const errorMessage = document.getElementById('errorMessage');
+
+      // Validation
+      if (isNaN(wallHeight) || isNaN(supportedLoad) || wallHeight <= 0 || supportedLoad <= 0) {
+        errorMessage.textContent = 'Please enter positive values for height and load.';
+        errorMessage.style.display = 'block';
+        return;
+      }
+      errorMessage.style.display = 'none';
+
+      const { Fc, Emin } = woodData[woodSpecies];
+      const loadPerStud = supportedLoad * spacingFt; // lbs
+      let requiredStudSize = "";
+      let maxLoadPerStud = 0;
+      let maxWallLoad = 0;
+
+      // Find smallest size that meets load
+      for (let i = 0; i < studSizes.length; i++) {
+        const size = studSizes[i];
+        const { area, d } = studDims[size];
+        const Cp = calculateCp(wallHeight, d, Fc, Emin);
+        let capacity = Fc * area * Cp; // lbs per stud
+        if (wallType === 'exterior') capacity *= 0.8; // Conservative 20% reduction for bending
+        if (loadPerStud <= capacity) {
+          requiredStudSize = size;
+          maxLoadPerStud = Math.round(capacity);
+          maxWallLoad = Math.round(capacity / spacingFt);
+          break;
+        }
+      }
+      if (!requiredStudSize) {
+        requiredStudSize = studSizes[studSizes.length - 1]; // Largest if none
+        const { area, d } = studDims[requiredStudSize];
+        const Cp = calculateCp(wallHeight, d, Fc, Emin);
+        maxLoadPerStud = Math.round(Fc * area * Cp * (wallType === 'exterior' ? 0.8 : 1));
+        maxWallLoad = Math.round(maxLoadPerStud / spacingFt);
+      }
+
+      // Display results
+      document.getElementById('studSize').textContent = requiredStudSize;
+      document.getElementById('maxLoadPerStud').textContent = maxLoadPerStud;
+      document.getElementById('loadPerStud').textContent = Math.round(loadPerStud);
+      document.getElementById('maxWallLoad').textContent = maxWallLoad;
+      const meetsRequirement = loadPerStud <= maxLoadPerStud;
+      document.getElementById('status').textContent = meetsRequirement ? 'Meets Requirements' : 'Does Not Meet Requirements';
+      document.getElementById('status').className = meetsRequirement ? 'status-pass' : 'status-fail';
+      document.getElementById('results').style.display = 'block';
+
+      // Notes
+      document.getElementById('blockingNote').style.display = wallHeight > 8 ? 'block' : 'none';
+      document.getElementById('heightWarning').style.display = wallHeight > 12 ? 'block' : 'none';
+    }
+
+    function resetForm() {
+      document.getElementById('wallHeight').value = '';
+      document.getElementById('supportedLoad').value = '';
+      document.getElementById('studSpacing').value = '16';
+      document.getElementById('woodSpecies').value = 'DouglasFirLarch2';
+      document.getElementById('wallType').value = 'interior';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('blockingNote').style.display = 'none';
+      document.getElementById('heightWarning').style.display = 'none';
+      updateCapacityTable();
+    }
+
+    // Event listeners
+    document.getElementById('calculateBtn').addEventListener('click', calculateWallCapacity);
+    document.getElementById('resetBtn').addEventListener('click', resetForm);
+    document.getElementById('woodSpecies').addEventListener('change', updateCapacityTable);
+
+    // Initialize
+    updateCapacityTable();
+  </script>
+</body>
+</html>
