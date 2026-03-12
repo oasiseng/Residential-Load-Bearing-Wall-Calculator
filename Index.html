@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IRC 2021 Residential Load-Bearing Wall Calculator — Oasis Engineering</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #f5f3ef;
+      --surface: #ffffff;
+      --surface-alt: #faf9f7;
+      --border: #e5e1db;
+      --border-light: #eeebe6;
+      --text: #1a1714;
+      --text-secondary: #6b6560;
+      --text-tertiary: #9a948e;
+      --accent: #1a5c4c;
+      --accent-light: #e8f3ef;
+      --accent-hover: #14493c;
+      --pass: #1a7a4c;
+      --pass-bg: #e6f5ed;
+      --fail: #b8372b;
+      --fail-bg: #fde8e6;
+      --warn: #a06c1a;
+      --warn-bg: #fef3e0;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 2px rgba(26,23,20,0.04);
+      --shadow: 0 2px 8px rgba(26,23,20,0.06), 0 1px 2px rgba(26,23,20,0.04);
+      --shadow-lg: 0 8px 32px rgba(26,23,20,0.08), 0 2px 8px rgba(26,23,20,0.04);
+      --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .page-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+    }
+    .page-header-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 14px;
+    }
+    .brand h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .brand .subtitle {
+      font-size: 0.78rem;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+    .code-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-tertiary);
+      background: var(--surface-alt);
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+    }
+
+    /* Layout */
+    .main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; padding: 16px; }
+      .page-header { padding: 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .card + .card { margin-top: 16px; }
+    .card-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+    .card-body { padding: 20px; }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-of-type { margin-bottom: 0; }
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .form-label .unit {
+      font-weight: 400;
+      color: var(--text-tertiary);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+    }
+    .help-tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-secondary);
+      font-size: 0.65rem;
+      font-weight: 700;
+      cursor: help;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .help-tip:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 400;
+      white-space: normal;
+      width: 240px;
+      line-height: 1.5;
+      z-index: 99;
+      pointer-events: none;
+      box-shadow: var(--shadow-lg);
+    }
+    input[type="number"], select {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(26,92,76,0.1);
+    }
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6560' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn-group { display: flex; gap: 8px; margin-top: 20px; }
+    .btn {
+      flex: 1;
+      padding: 11px 16px;
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--surface-alt);
+      color: var(--text-secondary);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--border-light); }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--fail-bg);
+      color: var(--fail);
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 500;
+      border: 1px solid rgba(184,55,43,0.15);
+      align-items: center;
+      gap: 8px;
+    }
+    .error-msg.visible { display: flex; }
+
+    /* Results */
+    .results-panel { display: none; }
+    .results-panel.visible { display: block; animation: fadeSlideIn 300ms ease-out; }
+
+    .verdict {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .verdict-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .verdict.pass .verdict-icon { background: var(--pass-bg); color: var(--pass); }
+    .verdict.fail .verdict-icon { background: var(--fail-bg); color: var(--fail); }
+    .verdict-text h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .verdict.pass h3 { color: var(--pass); }
+    .verdict.fail h3 { color: var(--fail); }
+    .verdict-text p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border-light);
+    }
+    .metric {
+      padding: 16px 20px;
+      background: var(--surface);
+      text-align: center;
+    }
+    .metric-value {
+      font-family: var(--mono);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-tertiary);
+      margin-top: 4px;
+    }
+
+    .utilization-section { padding: 20px; border-bottom: 1px solid var(--border-light); }
+    .util-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .util-label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+    .util-pct {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .util-bar-track {
+      width: 100%;
+      height: 10px;
+      background: var(--surface-alt);
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid var(--border-light);
+    }
+    .util-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 4px;
+    }
+    .util-low .util-pct, .util-low .util-bar-fill { color: var(--pass); background: var(--pass); }
+    .util-med .util-pct { color: var(--warn); }
+    .util-med .util-bar-fill { background: var(--warn); }
+    .util-high .util-pct, .util-high .util-bar-fill { color: var(--fail); background: var(--fail); }
+
+    .sizes-grid { padding: 20px; }
+    .sizes-grid h4 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+      margin-bottom: 14px;
+    }
+    .size-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 58px;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .size-row:last-child { border-bottom: none; }
+    .size-name {
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .size-row.recommended .size-name { color: var(--accent); }
+    .size-bar-track {
+      height: 8px;
+      background: var(--surface-alt);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-light);
+    }
+    .size-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 800ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .size-row.pass-row .size-bar-fill { background: var(--pass); }
+    .size-row.fail-row .size-bar-fill { background: var(--fail); }
+    .size-pct {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-align: right;
+    }
+    .size-row.pass-row .size-pct { color: var(--pass); }
+    .size-row.fail-row .size-pct { color: var(--fail); }
+    .rec-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--accent-light);
+      color: var(--accent);
+      padding: 2px 5px;
+      border-radius: 3px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      margin: 0 20px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .alert:first-child { margin-top: 16px; }
+    .alert-icon { flex-shrink: 0; font-size: 1rem; line-height: 1.4; }
+    .alert-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(160,108,26,0.15); }
+    .alert-info { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(26,92,76,0.12); }
+
+    .breakdown-toggle {
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--surface-alt);
+      border: none;
+      border-top: 1px solid var(--border-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: background var(--transition);
+    }
+    .breakdown-toggle:hover { background: var(--border-light); }
+    .breakdown-toggle .arrow { transition: transform var(--transition); font-size: 0.7rem; }
+    .breakdown-toggle.open .arrow { transform: rotate(180deg); }
+
+    .breakdown-content {
+      display: none;
+      padding: 20px;
+      background: var(--surface-alt);
+      border-top: 1px solid var(--border-light);
+      font-size: 0.82rem;
+      line-height: 1.7;
+    }
+    .breakdown-content.visible { display: block; }
+    .calc-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 4px 0;
+      border-bottom: 1px dashed var(--border-light);
+      gap: 12px;
+    }
+    .calc-line:last-child { border-bottom: none; }
+    .calc-var { color: var(--text-secondary); flex-shrink: 0; }
+    .calc-val {
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: var(--text);
+      text-align: right;
+    }
+    .calc-section-title {
+      font-weight: 700;
+      color: var(--text);
+      margin: 14px 0 6px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid var(--border);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .calc-section-title:first-child { margin-top: 0; }
+
+    /* Reference table */
+    .ref-table-card .card-body { padding: 0; overflow-x: auto; }
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .ref-table th {
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-tertiary);
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-table td {
+      padding: 10px 16px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text);
+    }
+    .ref-table th:first-child, .ref-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
+    .ref-table tr:last-child td { border-bottom: none; }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 24px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .disclaimer strong { color: var(--text); }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media print {
+      body { background: white; font-size: 11pt; }
+      .main { display: block; max-width: 100%; }
+      .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; margin-bottom: 16px; }
+      .btn-group { display: none; }
+      .breakdown-toggle { display: none; }
+      .breakdown-content { display: block !important; }
+      .results-panel { display: block !important; }
+      .page-header { border-bottom: 2px solid #333; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="page-header-inner">
+    <div class="brand">
+      <div class="brand-icon">OE</div>
+      <div>
+        <h1>Load-Bearing Wall Calculator</h1>
+        <div class="subtitle">IRC 2021 &amp; NDS 2018 — Residential Stud Design</div>
+      </div>
+    </div>
+    <div class="code-badge">
+      <span>v2.0</span>
+      <span style="color:var(--border);">|</span>
+      <span>NDS 2018 ASD</span>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- LEFT: INPUTS -->
+  <div class="input-col">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Input Parameters</span>
+      </div>
+      <div class="card-body">
+
+        <div class="form-group">
+          <label class="form-label" for="wallHeight">
+            Wall Height <span class="unit">ft</span>
+            <span class="help-tip" data-tip="Stud clear height. IRC prescriptive limit is 10 ft for bearing studs (R602.3.1). Heights above 10 ft may require engineered design per the local AHJ.">?</span>
+          </label>
+          <input type="number" id="wallHeight" min="1" max="20" step="0.1" placeholder="e.g. 10">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="supportedLoad">
+            Supported Load <span class="unit">plf</span>
+            <span class="help-tip" data-tip="Total service-level axial load from above (dead + live) per linear foot of wall. Typical single-story roof: 200-500 plf. Two-story bearing: 600-1200+ plf.">?</span>
+          </label>
+          <input type="number" id="supportedLoad" min="0" step="1" placeholder="e.g. 800">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="studSpacing">
+              Stud Spacing <span class="unit">in o.c.</span>
+            </label>
+            <select id="studSpacing">
+              <option value="12">12" o.c.</option>
+              <option value="16" selected>16" o.c.</option>
+              <option value="24">24" o.c.</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loadDuration">
+              Load Duration
+              <span class="help-tip" data-tip="NDS CD factor. Normal (1.0) for typical occupancy loads. Two-Month (1.15) if snow controls. Wind/Seismic (1.6) for lateral load combinations.">?</span>
+            </label>
+            <select id="loadDuration">
+              <option value="0.9">Permanent (0.9)</option>
+              <option value="1.0" selected>Normal (1.0)</option>
+              <option value="1.15">Two-Month / Snow (1.15)</option>
+              <option value="1.25">7-Day (1.25)</option>
+              <option value="1.6">Wind / Seismic (1.6)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="woodSpecies">
+            Wood Species &amp; Grade
+            <span class="help-tip" data-tip="Values from NDS 2018 Supplement Tables 4A/4B for dimension lumber. Southern Pine has size-specific Fc values per Table 4B. All others use base Fc with CF size factor.">?</span>
+          </label>
+          <select id="woodSpecies">
+            <option value="DFL2" selected>Douglas Fir-Larch No. 2</option>
+            <option value="SP2">Southern Pine No. 2</option>
+            <option value="HF2">Hem-Fir No. 2</option>
+            <option value="SPF2">Spruce-Pine-Fir No. 2</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="wallType">
+            Wall Type
+            <span class="help-tip" data-tip="Interior: pure axial compression check only. Exterior: applies a simplified 20% capacity reduction for combined axial + bending from wind. NOT a substitute for NDS §3.9 combined stress analysis.">?</span>
+          </label>
+          <select id="wallType">
+            <option value="interior" selected>Interior (Axial Only)</option>
+            <option value="exterior">Exterior (20% Wind Reduction)</option>
+          </select>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="calcBtn" onclick="calculate()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Calculate
+          </button>
+          <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+        </div>
+
+        <div class="error-msg" id="errorMsg">
+          <span>&#9888;</span>
+          <span id="errorText"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reference Table -->
+    <div class="card ref-table-card">
+      <div class="card-header">
+        <span class="card-title">Reference Capacities @ 10 ft</span>
+        <span style="font-size:0.72rem; color:var(--text-tertiary);">plf, C<sub>D</sub>=1.0, axial</span>
+      </div>
+      <div class="card-body">
+        <table class="ref-table" id="refTable">
+          <thead>
+            <tr>
+              <th>Size</th>
+              <th>12" o.c.</th>
+              <th>16" o.c.</th>
+              <th>24" o.c.</th>
+            </tr>
+          </thead>
+          <tbody id="refTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: RESULTS -->
+  <div class="results-col">
+    <div class="card" id="emptyState">
+      <div class="card-body" style="text-align:center; padding: 60px 40px;">
+        <div style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.15;">&#9645;</div>
+        <p style="color: var(--text-tertiary); font-size: 0.88rem;">Enter wall parameters and click <strong style="color:var(--text-secondary);">Calculate</strong> to see results.</p>
+      </div>
+    </div>
+
+    <div class="results-panel" id="resultsPanel">
+      <div class="card">
+        <div class="verdict" id="verdictBanner">
+          <div class="verdict-icon" id="verdictIcon"></div>
+          <div class="verdict-text">
+            <h3 id="verdictTitle"></h3>
+            <p id="verdictSubtitle"></p>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-value" id="mRecommended"></div>
+            <div class="metric-label">Recommended</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="mCapacity"></div>
+            <div class="metric-label">Capacity (plf)</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="mDemand"></div>
+            <div class="metric-label">Demand (plf)</div>
+          </div>
+        </div>
+
+        <div class="utilization-section" id="utilSection">
+          <div class="util-header">
+            <span class="util-label">Demand / Capacity Ratio</span>
+            <span class="util-pct" id="utilPct"></span>
+          </div>
+          <div class="util-bar-track">
+            <div class="util-bar-fill" id="utilBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="sizes-grid" id="sizesGrid">
+          <h4>All Stud Sizes &mdash; Utilization</h4>
+          <div id="sizeRows"></div>
+        </div>
+
+        <div id="alertsContainer"></div>
+
+        <button class="breakdown-toggle" id="breakdownToggle" onclick="toggleBreakdown()">
+          <span>Calculation Breakdown (NDS 2018 &sect;3.7)</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="breakdown-content" id="breakdownContent"></div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This tool provides estimates per IRC 2021 prescriptive provisions and NDS 2018 ASD for axial compression in dimension lumber studs. It does <strong>not</strong> check combined bending + axial interaction (NDS &sect;3.9), lateral/shear forces, eccentric loading, or seismic provisions. The exterior &ldquo;wind adjustment&rdquo; is a simplified 20% reduction &mdash; a full wind analysis per ASCE 7 is required for exterior wall design. Verify all designs with a licensed structural engineer and local code requirements. <strong>Oasis Engineering LLC assumes no liability for use of this tool.</strong>
+    </div>
+  </div>
+</main>
+
+<script>
+/*  ═══════════════════════════════════════════════════════════
+    NDS 2018 SUPPLEMENT DATA — CORRECTED VALUES
+    ═══════════════════════════════════════════════════════════
+
+    CORRECTIONS from v1.0:
+    ┌────────────────────────────┬──────────┬──────────┐
+    │ Item                       │ Old      │ Corrected│
+    ├────────────────────────────┼──────────┼──────────┤
+    │ DFL No.2 Fc (psi)         │ 1500     │ 1350     │
+    │ DFL Emin (psi)            │ 620,000  │ 580,000  │
+    │ 2×10 Area (in²)           │ 14.0     │ 13.875   │
+    │ Size factor CF             │ missing  │ applied  │
+    │ Load duration CD           │ missing  │ added    │
+    │ SP size-specific Fc        │ single   │ per size │
+    │ Cp uses Fc* (not base Fc)  │ wrong    │ fixed    │
+    └────────────────────────────┴──────────┴──────────┘
+*/
+
+const SPECIES = {
+  DFL2: {
+    name: "Douglas Fir-Larch No. 2",
+    Fc_base: 1350,
+    Emin: 580000,
+    cfType: "standard"
+  },
+  SP2: {
+    name: "Southern Pine No. 2",
+    Fc_bySize: { "2x4": 1650, "2x6": 1600, "2x8": 1550, "2x10": 1500 },
+    Emin: 510000,
+    cfType: "included"
+  },
+  HF2: {
+    name: "Hem-Fir No. 2",
+    Fc_base: 1300,
+    Emin: 470000,
+    cfType: "standard"
+  },
+  SPF2: {
+    name: "Spruce-Pine-Fir No. 2",
+    Fc_base: 1150,
+    Emin: 440000,
+    cfType: "standard"
+  }
+};
+
+const CF_FC = { "2x4": 1.15, "2x6": 1.10, "2x8": 1.05, "2x10": 1.00 };
+
+const STUDS = {
+  "2x4":  { b: 1.5, d: 3.5,  A: 5.25   },
+  "2x6":  { b: 1.5, d: 5.5,  A: 8.25   },
+  "2x8":  { b: 1.5, d: 7.25, A: 10.875 },
+  "2x10": { b: 1.5, d: 9.25, A: 13.875 }
+};
+
+const SIZES = ["2x4", "2x6", "2x8", "2x10"];
+
+// ── NDS §3.7 Column Stability Calculation ──
+
+function calcStud(size, species, heightFt, CD) {
+  const sp = SPECIES[species];
+  const stud = STUDS[size];
+  const le = heightFt * 12;
+  const slenderness = le / stud.d;
+
+  // Check slenderness limit (NDS §3.7.1.4: le/d ≤ 50)
+  const slendernessOK = slenderness <= 50;
+
+  let Fc_base;
+  if (sp.cfType === "included") {
+    Fc_base = sp.Fc_bySize[size];
+  } else {
+    Fc_base = sp.Fc_base;
+  }
+
+  const CF = (sp.cfType === "standard") ? CF_FC[size] : 1.0;
+  const FcStar = Fc_base * CD * CF;
+  const EminPrime = sp.Emin;
+
+  const KcE = 0.822;
+  const FcE = KcE * EminPrime / (slenderness * slenderness);
+
+  const c = 0.8;
+  const ratio = FcE / FcStar;
+  const term1 = (1 + ratio) / (2 * c);
+  const Cp = term1 - Math.sqrt(Math.max(term1 * term1 - ratio / c, 0));
+
+  const FcPrime = FcStar * Cp;
+  const capacityPerStud = FcPrime * stud.A;
+
+  return {
+    size, species: sp.name,
+    Fc_base, CF, CD, FcStar,
+    Emin: sp.Emin, EminPrime,
+    le, d: stud.d, b: stud.b, A: stud.A,
+    slenderness, slendernessOK, KcE, c,
+    FcE, ratio, Cp,
+    FcPrime, capacityPerStud
+  };
+}
+
+// ── UI ──
+
+function showError(msg) {
+  document.getElementById('errorText').textContent = msg;
+  document.getElementById('errorMsg').classList.add('visible');
+}
+function hideError() { document.getElementById('errorMsg').classList.remove('visible'); }
+
+function calculate() {
+  hideError();
+  const h = parseFloat(document.getElementById('wallHeight').value);
+  const load = parseFloat(document.getElementById('supportedLoad').value);
+  const spacing = parseInt(document.getElementById('studSpacing').value);
+  const species = document.getElementById('woodSpecies').value;
+  const CD = parseFloat(document.getElementById('loadDuration').value);
+  const wallType = document.getElementById('wallType').value;
+
+  if (isNaN(h) || h <= 0) { showError("Enter a positive wall height."); return; }
+  if (isNaN(load) || load < 0) { showError("Enter a non-negative supported load."); return; }
+  if (load === 0) { showError("Supported load is zero — nothing to check."); return; }
+
+  const spacingFt = spacing / 12;
+  const loadPerStud = load * spacingFt;
+  const windFactor = (wallType === "exterior") ? 0.80 : 1.0;
+
+  let results = [];
+  let recommended = null;
+
+  for (const size of SIZES) {
+    const calc = calcStud(size, species, h, CD);
+    const effectiveCapacity = calc.capacityPerStud * windFactor;
+    const utilization = loadPerStud / effectiveCapacity;
+    const plf = effectiveCapacity / spacingFt;
+
+    const entry = {
+      ...calc,
+      windFactor, effectiveCapacity, loadPerStud,
+      utilization, plf_capacity: plf,
+      passes: utilization <= 1.0
+    };
+    results.push(entry);
+    if (!recommended && entry.passes) recommended = entry;
+  }
+
+  if (!recommended) recommended = results[results.length - 1];
+
+  renderResults({ height: h, load, spacing, species, CD, wallType }, recommended, results);
+}
+
+function renderResults(inp, rec, all) {
+  document.getElementById('emptyState').style.display = 'none';
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.remove('visible');
+  // Force reflow for re-animation
+  void panel.offsetWidth;
+  panel.classList.add('visible');
+
+  const ok = rec.passes;
+
+  // Verdict
+  document.getElementById('verdictBanner').className = 'verdict ' + (ok ? 'pass' : 'fail');
+  document.getElementById('verdictIcon').textContent = ok ? '✓' : '✗';
+  const spShort = SPECIES[inp.species].name.split(' No.')[0];
+  document.getElementById('verdictTitle').textContent = ok
+    ? `${rec.size} ${spShort} — Adequate`
+    : `${rec.size} — Does Not Meet Requirements`;
+  document.getElementById('verdictSubtitle').textContent = ok
+    ? `Minimum stud size at ${inp.spacing}" o.c. for ${inp.load} plf`
+    : `Even 2×10 is overstressed at these parameters. Engineering required.`;
+
+  // Metrics
+  document.getElementById('mRecommended').textContent = rec.size;
+  document.getElementById('mCapacity').textContent = Math.round(rec.plf_capacity).toLocaleString();
+  document.getElementById('mDemand').textContent = Math.round(inp.load).toLocaleString();
+
+  // Utilization
+  const utilPct = rec.utilization * 100;
+  const cls = rec.utilization <= 0.75 ? 'util-low' : (rec.utilization <= 1.0 ? 'util-med' : 'util-high');
+  document.getElementById('utilSection').className = 'utilization-section ' + cls;
+  document.getElementById('utilPct').textContent = utilPct.toFixed(1) + '%';
+  const bar = document.getElementById('utilBar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bar.style.transition = 'width 600ms cubic-bezier(0.4,0,0.2,1)';
+      bar.style.width = Math.min(utilPct, 100) + '%';
+    });
+  });
+
+  // All sizes
+  const el = document.getElementById('sizeRows');
+  el.innerHTML = '';
+  all.forEach(r => {
+    const isRec = (r.size === rec.size) && ok;
+    const pct = r.utilization * 100;
+    el.innerHTML += `
+      <div class="size-row ${r.passes ? 'pass-row' : 'fail-row'} ${isRec ? 'recommended' : ''}">
+        <div class="size-name">${r.size}${isRec ? '<span class="rec-badge">min</span>' : ''}</div>
+        <div class="size-bar-track">
+          <div class="size-bar-fill" data-pct="${Math.min(pct, 100)}" style="width:0%"></div>
+        </div>
+        <div class="size-pct">${pct.toFixed(0)}%</div>
+      </div>`;
+  });
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.size-bar-fill').forEach(b => {
+        b.style.transition = 'width 800ms cubic-bezier(0.4,0,0.2,1)';
+        b.style.width = b.dataset.pct + '%';
+      });
+    });
+  });
+
+  // Alerts
+  let alerts = '';
+  if (inp.height > 10) {
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
+      Heights above 10 ft exceed IRC prescriptive limits for bearing studs (R602.3.1). Engineered design required per AHJ.</div>`;
+  }
+  if (inp.height > 8) {
+    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
+      For walls &gt; 8 ft, add mid-height blocking for lateral stability per IRC R602.10.1.</div>`;
+  }
+  if (inp.wallType === 'exterior') {
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
+      The 20% exterior reduction is a rough approximation. Actual design requires combined stress check per NDS &sect;3.9 with site-specific wind loads per ASCE 7.</div>`;
+  }
+  if (!ok) {
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
+      No standard dimension lumber stud is adequate. Consider engineered lumber (LVL/PSL studs), closer spacing, reduced loads, or an alternate framing system.</div>`;
+  }
+  if (inp.load > 1500) {
+    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
+      Load exceeds 1,500 plf. Verify input &mdash; typical 2-story residential is ~600&ndash;1,200 plf. Multi-story or heavy loads may need posts or engineered studs.</div>`;
+  }
+  // Slenderness check
+  const recSlenderness = rec.slenderness;
+  if (!rec.slendernessOK) {
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
+      Slenderness ratio l<sub>e</sub>/d = ${recSlenderness.toFixed(1)} exceeds NDS limit of 50. This combination of height and stud size is not permitted per NDS &sect;3.7.1.4.</div>`;
+  }
+  document.getElementById('alertsContainer').innerHTML = alerts;
+
+  renderBreakdown(rec, inp);
+}
+
+function renderBreakdown(r, inp) {
+  const spacingFt = inp.spacing / 12;
+  document.getElementById('breakdownContent').innerHTML = `
+    <div class="calc-section-title">1. Material Properties (NDS 2018 Supplement)</div>
+    <div class="calc-line"><span class="calc-var">Species / Grade</span><span class="calc-val">${r.species}</span></div>
+    <div class="calc-line"><span class="calc-var">Base F<sub>c</sub></span><span class="calc-val">${r.Fc_base.toLocaleString()} psi</span></div>
+    <div class="calc-line"><span class="calc-var">E<sub>min</sub></span><span class="calc-val">${r.Emin.toLocaleString()} psi</span></div>
+
+    <div class="calc-section-title">2. Stud Section — ${r.size}</div>
+    <div class="calc-line"><span class="calc-var">Actual dimensions</span><span class="calc-val">${r.b}" × ${r.d}"</span></div>
+    <div class="calc-line"><span class="calc-var">Area (A)</span><span class="calc-val">${r.A} in&sup2;</span></div>
+
+    <div class="calc-section-title">3. Adjustment Factors</div>
+    <div class="calc-line"><span class="calc-var">C<sub>D</sub> (load duration)</span><span class="calc-val">${r.CD}</span></div>
+    <div class="calc-line"><span class="calc-var">C<sub>F</sub> (size factor)</span><span class="calc-val">${r.CF}${r.CF === 1.0 && SPECIES[inp.species].cfType === 'included' ? ' (incl. in tabulated F<sub>c</sub>)' : ''}</span></div>
+    <div class="calc-line"><span class="calc-var">C<sub>M</sub>, C<sub>t</sub>, C<sub>i</sub></span><span class="calc-val">1.0 (normal dry conditions)</span></div>
+    <div class="calc-line"><span class="calc-var">F<sub>c</sub>* = F<sub>c</sub> &times; C<sub>D</sub> &times; C<sub>F</sub></span><span class="calc-val">${r.Fc_base} &times; ${r.CD} &times; ${r.CF} = <strong>${r.FcStar.toFixed(0)} psi</strong></span></div>
+
+    <div class="calc-section-title">4. Column Stability — NDS &sect;3.7.1</div>
+    <div class="calc-line"><span class="calc-var">l<sub>e</sub> = K<sub>e</sub> &times; L &nbsp;(K<sub>e</sub> = 1.0)</span><span class="calc-val">${r.le.toFixed(1)}"</span></div>
+    <div class="calc-line"><span class="calc-var">l<sub>e</sub> / d (slenderness)</span><span class="calc-val">${r.slenderness.toFixed(2)}${!r.slendernessOK ? ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>' : ' &le; 50 &#10003;'}</span></div>
+    <div class="calc-line"><span class="calc-var">K<sub>cE</sub> (visually graded)</span><span class="calc-val">${r.KcE}</span></div>
+    <div class="calc-line"><span class="calc-var">F<sub>cE</sub> = K<sub>cE</sub> &times; E'<sub>min</sub> / (l<sub>e</sub>/d)&sup2;</span><span class="calc-val">${r.FcE.toFixed(1)} psi</span></div>
+    <div class="calc-line"><span class="calc-var">F<sub>cE</sub> / F<sub>c</sub>*</span><span class="calc-val">${r.ratio.toFixed(4)}</span></div>
+    <div class="calc-line"><span class="calc-var">c (sawn lumber)</span><span class="calc-val">${r.c}</span></div>
+    <div class="calc-line"><span class="calc-var"><strong>C<sub>p</sub></strong></span><span class="calc-val"><strong>${r.Cp.toFixed(4)}</strong></span></div>
+
+    <div class="calc-section-title">5. Adjusted Design Value</div>
+    <div class="calc-line"><span class="calc-var">F'<sub>c</sub> = F<sub>c</sub>* &times; C<sub>p</sub></span><span class="calc-val">${r.FcStar.toFixed(0)} &times; ${r.Cp.toFixed(4)} = <strong>${r.FcPrime.toFixed(1)} psi</strong></span></div>
+    <div class="calc-line"><span class="calc-var">Capacity = F'<sub>c</sub> &times; A</span><span class="calc-val">${r.FcPrime.toFixed(1)} &times; ${r.A} = <strong>${r.capacityPerStud.toFixed(0)} lbs/stud</strong></span></div>
+    ${r.windFactor < 1.0 ? `<div class="calc-line"><span class="calc-var">Wind factor (&times;${r.windFactor})</span><span class="calc-val">${r.effectiveCapacity.toFixed(0)} lbs/stud (effective)</span></div>` : ''}
+
+    <div class="calc-section-title">6. Demand vs. Capacity</div>
+    <div class="calc-line"><span class="calc-var">Demand/stud = ${inp.load} plf &times; ${spacingFt.toFixed(4)} ft</span><span class="calc-val">${r.loadPerStud.toFixed(0)} lbs</span></div>
+    <div class="calc-line"><span class="calc-var">Capacity/stud</span><span class="calc-val">${r.effectiveCapacity.toFixed(0)} lbs</span></div>
+    <div class="calc-line"><span class="calc-var"><strong>D/C ratio</strong></span><span class="calc-val"><strong>${(r.utilization * 100).toFixed(1)}%</strong> ${r.passes ? '&le; 100% &#10003;' : '&gt; 100% &#10007;'}</span></div>
+    <div class="calc-line"><span class="calc-var">Wall capacity</span><span class="calc-val">${Math.round(r.plf_capacity).toLocaleString()} plf</span></div>
+  `;
+}
+
+function toggleBreakdown() {
+  document.getElementById('breakdownToggle').classList.toggle('open');
+  document.getElementById('breakdownContent').classList.toggle('visible');
+}
+
+function resetAll() {
+  document.getElementById('wallHeight').value = '';
+  document.getElementById('supportedLoad').value = '';
+  document.getElementById('studSpacing').value = '16';
+  document.getElementById('loadDuration').value = '1.0';
+  document.getElementById('woodSpecies').value = 'DFL2';
+  document.getElementById('wallType').value = 'interior';
+  hideError();
+  document.getElementById('resultsPanel').classList.remove('visible');
+  document.getElementById('emptyState').style.display = '';
+  document.getElementById('breakdownToggle').classList.remove('open');
+  document.getElementById('breakdownContent').classList.remove('visible');
+}
+
+// ── Reference Table ──
+function updateRefTable() {
+  const species = document.getElementById('woodSpecies').value;
+  const tbody = document.getElementById('refTableBody');
+  tbody.innerHTML = '';
+  SIZES.forEach(size => {
+    const calc = calcStud(size, species, 10, 1.0);
+    let row = '<tr><td>' + size + '</td>';
+    [12, 16, 24].forEach(sp => {
+      row += '<td>' + Math.round(calc.capacityPerStud / (sp / 12)).toLocaleString() + '</td>';
+    });
+    tbody.innerHTML += row + '</tr>';
+  });
+}
+
+// ── Events ──
+document.getElementById('woodSpecies').addEventListener('change', updateRefTable);
+document.querySelectorAll('input[type="number"]').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+});
+
+updateRefTable();
+</script>
+</body>
+</html>
