@@ -754,24 +754,15 @@
     </div>
   </div>
 </main>
-
 <script>
 /*  ═══════════════════════════════════════════════════════════
-    NDS 2018 SUPPLEMENT DATA — CORRECTED VALUES
+    NDS 2018 SUPPLEMENT DATA — REVISED
+    Notes:
+    - Weak-axis slenderness now controls compression stability.
+    - Slenderness > 50 is treated as automatic failure.
+    - Exterior wall option remains a rough screening reduction only.
+    - This is still NOT a substitute for full combined axial + bending design.
     ═══════════════════════════════════════════════════════════
-
-    CORRECTIONS from v1.0:
-    ┌────────────────────────────┬──────────┬──────────┐
-    │ Item                       │ Old      │ Corrected│
-    ├────────────────────────────┼──────────┼──────────┤
-    │ DFL No.2 Fc (psi)         │ 1500     │ 1350     │
-    │ DFL Emin (psi)            │ 620,000  │ 580,000  │
-    │ 2×10 Area (in²)           │ 14.0     │ 13.875   │
-    │ Size factor CF             │ missing  │ applied  │
-    │ Load duration CD           │ missing  │ added    │
-    │ SP size-specific Fc        │ single   │ per size │
-    │ Cp uses Fc* (not base Fc)  │ wrong    │ fixed    │
-    └────────────────────────────┴──────────┴──────────┘
 */
 
 const SPECIES = {
@@ -813,14 +804,22 @@ const STUDS = {
 const SIZES = ["2x4", "2x6", "2x8", "2x10"];
 
 // ── NDS §3.7 Column Stability Calculation ──
+// IMPORTANT: For stud compression stability, weak-axis/slenderness control is used here.
+// This is intentionally conservative relative to assuming buckling about the strong axis.
 
 function calcStud(size, species, heightFt, CD) {
   const sp = SPECIES[species];
   const stud = STUDS[size];
-  const le = heightFt * 12;
-  const slenderness = le / stud.d;
 
-  // Check slenderness limit (NDS §3.7.1.4: le/d ≤ 50)
+  // Effective length assumption
+  const Ke = 1.0;
+  const le = Ke * heightFt * 12;
+
+  // Weak-axis / least dimension governs for slenderness screening
+  const leastDim = Math.min(stud.b, stud.d);
+  const slenderness = le / leastDim;
+
+  // NDS slenderness limit
   const slendernessOK = slenderness <= 50;
 
   let Fc_base;
@@ -834,25 +833,43 @@ function calcStud(size, species, heightFt, CD) {
   const FcStar = Fc_base * CD * CF;
   const EminPrime = sp.Emin;
 
+  // NDS column stability inputs
   const KcE = 0.822;
-  const FcE = KcE * EminPrime / (slenderness * slenderness);
-
   const c = 0.8;
+
+  const FcE = KcE * EminPrime / (slenderness * slenderness);
   const ratio = FcE / FcStar;
   const term1 = (1 + ratio) / (2 * c);
-  const Cp = term1 - Math.sqrt(Math.max(term1 * term1 - ratio / c, 0));
+  const disc = Math.max(term1 * term1 - ratio / c, 0);
+  const Cp = term1 - Math.sqrt(disc);
 
   const FcPrime = FcStar * Cp;
   const capacityPerStud = FcPrime * stud.A;
 
   return {
-    size, species: sp.name,
-    Fc_base, CF, CD, FcStar,
-    Emin: sp.Emin, EminPrime,
-    le, d: stud.d, b: stud.b, A: stud.A,
-    slenderness, slendernessOK, KcE, c,
-    FcE, ratio, Cp,
-    FcPrime, capacityPerStud
+    size,
+    species: sp.name,
+    Fc_base,
+    CF,
+    CD,
+    FcStar,
+    Emin: sp.Emin,
+    EminPrime,
+    Ke,
+    le,
+    d: stud.d,
+    b: stud.b,
+    A: stud.A,
+    leastDim,
+    slenderness,
+    slendernessOK,
+    KcE,
+    c,
+    FcE,
+    ratio,
+    Cp,
+    FcPrime,
+    capacityPerStud
   };
 }
 
@@ -862,10 +879,13 @@ function showError(msg) {
   document.getElementById('errorText').textContent = msg;
   document.getElementById('errorMsg').classList.add('visible');
 }
-function hideError() { document.getElementById('errorMsg').classList.remove('visible'); }
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('visible');
+}
 
 function calculate() {
   hideError();
+
   const h = parseFloat(document.getElementById('wallHeight').value);
   const load = parseFloat(document.getElementById('supportedLoad').value);
   const spacing = parseInt(document.getElementById('studSpacing').value);
@@ -873,12 +893,25 @@ function calculate() {
   const CD = parseFloat(document.getElementById('loadDuration').value);
   const wallType = document.getElementById('wallType').value;
 
-  if (isNaN(h) || h <= 0) { showError("Enter a positive wall height."); return; }
-  if (isNaN(load) || load < 0) { showError("Enter a non-negative supported load."); return; }
-  if (load === 0) { showError("Supported load is zero — nothing to check."); return; }
+  if (isNaN(h) || h <= 0) {
+    showError("Enter a positive wall height.");
+    return;
+  }
+  if (isNaN(load) || load < 0) {
+    showError("Enter a non-negative supported load.");
+    return;
+  }
+  if (load === 0) {
+    showError("Supported load is zero — nothing to check.");
+    return;
+  }
 
   const spacingFt = spacing / 12;
+
+  // Service load per stud from wall load
   const loadPerStud = load * spacingFt;
+
+  // Exterior wall option is ONLY a rough screening reduction
   const windFactor = (wallType === "exterior") ? 0.80 : 1.0;
 
   let results = [];
@@ -890,26 +923,38 @@ function calculate() {
     const utilization = loadPerStud / effectiveCapacity;
     const plf = effectiveCapacity / spacingFt;
 
+    const passes = (utilization <= 1.0) && calc.slendernessOK;
+
     const entry = {
       ...calc,
-      windFactor, effectiveCapacity, loadPerStud,
-      utilization, plf_capacity: plf,
-      passes: utilization <= 1.0
+      windFactor,
+      effectiveCapacity,
+      loadPerStud,
+      utilization,
+      plf_capacity: plf,
+      passes
     };
+
     results.push(entry);
-    if (!recommended && entry.passes) recommended = entry;
+
+    if (!recommended && entry.passes) {
+      recommended = entry;
+    }
   }
 
-  if (!recommended) recommended = results[results.length - 1];
+  // If nothing passes, show the largest size for comparison only
+  if (!recommended) {
+    recommended = results[results.length - 1];
+  }
 
   renderResults({ height: h, load, spacing, species, CD, wallType }, recommended, results);
 }
 
 function renderResults(inp, rec, all) {
   document.getElementById('emptyState').style.display = 'none';
+
   const panel = document.getElementById('resultsPanel');
   panel.classList.remove('visible');
-  // Force reflow for re-animation
   void panel.offsetWidth;
   panel.classList.add('visible');
 
@@ -918,13 +963,22 @@ function renderResults(inp, rec, all) {
   // Verdict
   document.getElementById('verdictBanner').className = 'verdict ' + (ok ? 'pass' : 'fail');
   document.getElementById('verdictIcon').textContent = ok ? '✓' : '✗';
+
   const spShort = SPECIES[inp.species].name.split(' No.')[0];
-  document.getElementById('verdictTitle').textContent = ok
-    ? `${rec.size} ${spShort} — Adequate`
-    : `${rec.size} — Does Not Meet Requirements`;
-  document.getElementById('verdictSubtitle').textContent = ok
-    ? `Minimum stud size at ${inp.spacing}" o.c. for ${inp.load} plf`
-    : `Even 2×10 is overstressed at these parameters. Engineering required.`;
+
+  if (ok && inp.wallType === 'interior') {
+    document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Adequate`;
+    document.getElementById('verdictSubtitle').textContent =
+      `Minimum stud size at ${inp.spacing}" o.c. for ${inp.load} plf axial screening load`;
+  } else if (ok && inp.wallType === 'exterior') {
+    document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Screening Pass`;
+    document.getElementById('verdictSubtitle').textContent =
+      `Preliminary only. Exterior walls still require full axial + bending / wind design as applicable.`;
+  } else {
+    document.getElementById('verdictTitle').textContent = `${rec.size} — Does Not Meet Requirements`;
+    document.getElementById('verdictSubtitle').textContent =
+      `No listed stud size passes both capacity and slenderness screening at these parameters.`;
+  }
 
   // Metrics
   document.getElementById('mRecommended').textContent = rec.size;
@@ -936,9 +990,11 @@ function renderResults(inp, rec, all) {
   const cls = rec.utilization <= 0.75 ? 'util-low' : (rec.utilization <= 1.0 ? 'util-med' : 'util-high');
   document.getElementById('utilSection').className = 'utilization-section ' + cls;
   document.getElementById('utilPct').textContent = utilPct.toFixed(1) + '%';
+
   const bar = document.getElementById('utilBar');
   bar.style.transition = 'none';
   bar.style.width = '0%';
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       bar.style.transition = 'width 600ms cubic-bezier(0.4,0,0.2,1)';
@@ -949,18 +1005,25 @@ function renderResults(inp, rec, all) {
   // All sizes
   const el = document.getElementById('sizeRows');
   el.innerHTML = '';
+
   all.forEach(r => {
-    const isRec = (r.size === rec.size) && ok;
+    const isRec = (r.size === rec.size) && r.passes;
     const pct = r.utilization * 100;
+
+    let suffix = '';
+    if (!r.slendernessOK) suffix = '<span class="rec-badge" style="background:#fde8e6;color:#b8372b;">slender</span>';
+    else if (isRec) suffix = '<span class="rec-badge">min</span>';
+
     el.innerHTML += `
       <div class="size-row ${r.passes ? 'pass-row' : 'fail-row'} ${isRec ? 'recommended' : ''}">
-        <div class="size-name">${r.size}${isRec ? '<span class="rec-badge">min</span>' : ''}</div>
+        <div class="size-name">${r.size}${suffix}</div>
         <div class="size-bar-track">
           <div class="size-bar-fill" data-pct="${Math.min(pct, 100)}" style="width:0%"></div>
         </div>
         <div class="size-pct">${pct.toFixed(0)}%</div>
       </div>`;
   });
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       el.querySelectorAll('.size-bar-fill').forEach(b => {
@@ -972,32 +1035,37 @@ function renderResults(inp, rec, all) {
 
   // Alerts
   let alerts = '';
+
   if (inp.height > 10) {
     alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      Heights above 10 ft exceed IRC prescriptive limits for bearing studs (R602.3.1). Engineered design required per AHJ.</div>`;
+      Heights above 10 ft exceed typical IRC prescriptive wall-height limits for bearing studs. Engineered review may be required by the AHJ.</div>`;
   }
+
   if (inp.height > 8) {
     alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
-      For walls &gt; 8 ft, add mid-height blocking for lateral stability per IRC R602.10.1.</div>`;
+      Taller stud walls may require additional lateral restraint, sheathing/bracing justification, or engineering review depending on the assembly and code path.</div>`;
   }
+
   if (inp.wallType === 'exterior') {
     alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      The 20% exterior reduction is a rough approximation. Actual design requires combined stress check per NDS &sect;3.9 with site-specific wind loads per ASCE 7.</div>`;
+      Exterior wall mode applies only a simplified 20% reduction for screening. This is not a substitute for full combined axial + bending analysis and site-specific wind design.</div>`;
   }
+
   if (!ok) {
     alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      No standard dimension lumber stud is adequate. Consider engineered lumber (LVL/PSL studs), closer spacing, reduced loads, or an alternate framing system.</div>`;
+      No standard listed stud size passes this screening. Consider engineered studs, lower tributary load, shorter unbraced height, closer spacing, or alternate framing.</div>`;
   }
-  if (inp.load > 1500) {
-    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
-      Load exceeds 1,500 plf. Verify input &mdash; typical 2-story residential is ~600&ndash;1,200 plf. Multi-story or heavy loads may need posts or engineered studs.</div>`;
-  }
-  // Slenderness check
-  const recSlenderness = rec.slenderness;
+
   if (!rec.slendernessOK) {
     alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      Slenderness ratio l<sub>e</sub>/d = ${recSlenderness.toFixed(1)} exceeds NDS limit of 50. This combination of height and stud size is not permitted per NDS &sect;3.7.1.4.</div>`;
+      Recommended comparison stud has l<sub>e</sub>/least dimension = ${rec.slenderness.toFixed(1)}, which exceeds the NDS limit of 50. This condition is not acceptable under this screening check.</div>`;
   }
+
+  if (inp.load > 1500) {
+    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
+      Input load exceeds 1,500 plf. Verify tributary width, load path, and service load assumptions. Heavy roof/floor systems or multi-story load paths may require engineered design.</div>`;
+  }
+
   document.getElementById('alertsContainer').innerHTML = alerts;
 
   renderBreakdown(rec, inp);
@@ -1005,8 +1073,9 @@ function renderResults(inp, rec, all) {
 
 function renderBreakdown(r, inp) {
   const spacingFt = inp.spacing / 12;
+
   document.getElementById('breakdownContent').innerHTML = `
-    <div class="calc-section-title">1. Material Properties (NDS 2018 Supplement)</div>
+    <div class="calc-section-title">1. Material Properties</div>
     <div class="calc-line"><span class="calc-var">Species / Grade</span><span class="calc-val">${r.species}</span></div>
     <div class="calc-line"><span class="calc-var">Base F<sub>c</sub></span><span class="calc-val">${r.Fc_base.toLocaleString()} psi</span></div>
     <div class="calc-line"><span class="calc-var">E<sub>min</sub></span><span class="calc-val">${r.Emin.toLocaleString()} psi</span></div>
@@ -1014,31 +1083,34 @@ function renderBreakdown(r, inp) {
     <div class="calc-section-title">2. Stud Section — ${r.size}</div>
     <div class="calc-line"><span class="calc-var">Actual dimensions</span><span class="calc-val">${r.b}" × ${r.d}"</span></div>
     <div class="calc-line"><span class="calc-var">Area (A)</span><span class="calc-val">${r.A} in&sup2;</span></div>
+    <div class="calc-line"><span class="calc-var">Controlling dimension for slenderness</span><span class="calc-val">${r.leastDim}"</span></div>
 
     <div class="calc-section-title">3. Adjustment Factors</div>
     <div class="calc-line"><span class="calc-var">C<sub>D</sub> (load duration)</span><span class="calc-val">${r.CD}</span></div>
-    <div class="calc-line"><span class="calc-var">C<sub>F</sub> (size factor)</span><span class="calc-val">${r.CF}${r.CF === 1.0 && SPECIES[inp.species].cfType === 'included' ? ' (incl. in tabulated F<sub>c</sub>)' : ''}</span></div>
-    <div class="calc-line"><span class="calc-var">C<sub>M</sub>, C<sub>t</sub>, C<sub>i</sub></span><span class="calc-val">1.0 (normal dry conditions)</span></div>
-    <div class="calc-line"><span class="calc-var">F<sub>c</sub>* = F<sub>c</sub> &times; C<sub>D</sub> &times; C<sub>F</sub></span><span class="calc-val">${r.Fc_base} &times; ${r.CD} &times; ${r.CF} = <strong>${r.FcStar.toFixed(0)} psi</strong></span></div>
+    <div class="calc-line"><span class="calc-var">C<sub>F</sub> (size factor)</span><span class="calc-val">${r.CF}${r.CF === 1.0 && SPECIES[inp.species].cfType === 'included' ? ' (included in tabulated F<sub>c</sub>)' : ''}</span></div>
+    <div class="calc-line"><span class="calc-var">Assumed C<sub>M</sub>, C<sub>t</sub>, C<sub>i</sub></span><span class="calc-val">1.0</span></div>
+    <div class="calc-line"><span class="calc-var">F<sub>c</sub>* = F<sub>c</sub> × C<sub>D</sub> × C<sub>F</sub></span><span class="calc-val">${r.Fc_base} × ${r.CD} × ${r.CF} = <strong>${r.FcStar.toFixed(0)} psi</strong></span></div>
 
-    <div class="calc-section-title">4. Column Stability — NDS &sect;3.7.1</div>
-    <div class="calc-line"><span class="calc-var">l<sub>e</sub> = K<sub>e</sub> &times; L &nbsp;(K<sub>e</sub> = 1.0)</span><span class="calc-val">${r.le.toFixed(1)}"</span></div>
-    <div class="calc-line"><span class="calc-var">l<sub>e</sub> / d (slenderness)</span><span class="calc-val">${r.slenderness.toFixed(2)}${!r.slendernessOK ? ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>' : ' &le; 50 &#10003;'}</span></div>
-    <div class="calc-line"><span class="calc-var">K<sub>cE</sub> (visually graded)</span><span class="calc-val">${r.KcE}</span></div>
-    <div class="calc-line"><span class="calc-var">F<sub>cE</sub> = K<sub>cE</sub> &times; E'<sub>min</sub> / (l<sub>e</sub>/d)&sup2;</span><span class="calc-val">${r.FcE.toFixed(1)} psi</span></div>
+    <div class="calc-section-title">4. Column Stability</div>
+    <div class="calc-line"><span class="calc-var">K<sub>e</sub></span><span class="calc-val">${r.Ke}</span></div>
+    <div class="calc-line"><span class="calc-var">l<sub>e</sub> = K<sub>e</sub> × L</span><span class="calc-val">${r.le.toFixed(1)}"</span></div>
+    <div class="calc-line"><span class="calc-var">l<sub>e</sub> / least dimension</span><span class="calc-val">${r.slenderness.toFixed(2)}${!r.slendernessOK ? ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>' : ' &le; 50 &#10003;'}</span></div>
+    <div class="calc-line"><span class="calc-var">K<sub>cE</sub></span><span class="calc-val">${r.KcE}</span></div>
+    <div class="calc-line"><span class="calc-var">F<sub>cE</sub> = K<sub>cE</sub> × E'<sub>min</sub> / (l<sub>e</sub>/least dim.)&sup2;</span><span class="calc-val">${r.FcE.toFixed(1)} psi</span></div>
     <div class="calc-line"><span class="calc-var">F<sub>cE</sub> / F<sub>c</sub>*</span><span class="calc-val">${r.ratio.toFixed(4)}</span></div>
-    <div class="calc-line"><span class="calc-var">c (sawn lumber)</span><span class="calc-val">${r.c}</span></div>
+    <div class="calc-line"><span class="calc-var">c</span><span class="calc-val">${r.c}</span></div>
     <div class="calc-line"><span class="calc-var"><strong>C<sub>p</sub></strong></span><span class="calc-val"><strong>${r.Cp.toFixed(4)}</strong></span></div>
 
-    <div class="calc-section-title">5. Adjusted Design Value</div>
-    <div class="calc-line"><span class="calc-var">F'<sub>c</sub> = F<sub>c</sub>* &times; C<sub>p</sub></span><span class="calc-val">${r.FcStar.toFixed(0)} &times; ${r.Cp.toFixed(4)} = <strong>${r.FcPrime.toFixed(1)} psi</strong></span></div>
-    <div class="calc-line"><span class="calc-var">Capacity = F'<sub>c</sub> &times; A</span><span class="calc-val">${r.FcPrime.toFixed(1)} &times; ${r.A} = <strong>${r.capacityPerStud.toFixed(0)} lbs/stud</strong></span></div>
-    ${r.windFactor < 1.0 ? `<div class="calc-line"><span class="calc-var">Wind factor (&times;${r.windFactor})</span><span class="calc-val">${r.effectiveCapacity.toFixed(0)} lbs/stud (effective)</span></div>` : ''}
+    <div class="calc-section-title">5. Adjusted Compression Capacity</div>
+    <div class="calc-line"><span class="calc-var">F'<sub>c</sub> = F<sub>c</sub>* × C<sub>p</sub></span><span class="calc-val">${r.FcStar.toFixed(0)} × ${r.Cp.toFixed(4)} = <strong>${r.FcPrime.toFixed(1)} psi</strong></span></div>
+    <div class="calc-line"><span class="calc-var">Capacity = F'<sub>c</sub> × A</span><span class="calc-val">${r.FcPrime.toFixed(1)} × ${r.A} = <strong>${r.capacityPerStud.toFixed(0)} lbs/stud</strong></span></div>
+    ${r.windFactor < 1.0 ? `<div class="calc-line"><span class="calc-var">Exterior screening reduction</span><span class="calc-val">× ${r.windFactor} → ${r.effectiveCapacity.toFixed(0)} lbs/stud</span></div>` : ''}
 
     <div class="calc-section-title">6. Demand vs. Capacity</div>
-    <div class="calc-line"><span class="calc-var">Demand/stud = ${inp.load} plf &times; ${spacingFt.toFixed(4)} ft</span><span class="calc-val">${r.loadPerStud.toFixed(0)} lbs</span></div>
+    <div class="calc-line"><span class="calc-var">Demand/stud = ${inp.load} plf × ${spacingFt.toFixed(4)} ft</span><span class="calc-val">${r.loadPerStud.toFixed(0)} lbs</span></div>
     <div class="calc-line"><span class="calc-var">Capacity/stud</span><span class="calc-val">${r.effectiveCapacity.toFixed(0)} lbs</span></div>
-    <div class="calc-line"><span class="calc-var"><strong>D/C ratio</strong></span><span class="calc-val"><strong>${(r.utilization * 100).toFixed(1)}%</strong> ${r.passes ? '&le; 100% &#10003;' : '&gt; 100% &#10007;'}</span></div>
+    <div class="calc-line"><span class="calc-var"><strong>D/C ratio</strong></span><span class="calc-val"><strong>${(r.utilization * 100).toFixed(1)}%</strong> ${r.utilization <= 1.0 ? '&le; 100% &#10003;' : '&gt; 100% &#10007;'}</span></div>
+    <div class="calc-line"><span class="calc-var">Slenderness status</span><span class="calc-val">${r.slendernessOK ? '&#10003; OK' : '&#10007; FAIL'}</span></div>
     <div class="calc-line"><span class="calc-var">Wall capacity</span><span class="calc-val">${Math.round(r.plf_capacity).toLocaleString()} plf</span></div>
   `;
 }
@@ -1055,6 +1127,7 @@ function resetAll() {
   document.getElementById('loadDuration').value = '1.0';
   document.getElementById('woodSpecies').value = 'DFL2';
   document.getElementById('wallType').value = 'interior';
+
   hideError();
   document.getElementById('resultsPanel').classList.remove('visible');
   document.getElementById('emptyState').style.display = '';
@@ -1063,24 +1136,36 @@ function resetAll() {
 }
 
 // ── Reference Table ──
+// Still a simplified axial screening table at 10 ft, dry-use assumptions, Ke = 1.0
+
 function updateRefTable() {
   const species = document.getElementById('woodSpecies').value;
   const tbody = document.getElementById('refTableBody');
   tbody.innerHTML = '';
+
   SIZES.forEach(size => {
     const calc = calcStud(size, species, 10, 1.0);
-    let row = '<tr><td>' + size + '</td>';
+
+    let row = `<tr><td>${size}</td>`;
+
     [12, 16, 24].forEach(sp => {
-      row += '<td>' + Math.round(calc.capacityPerStud / (sp / 12)).toLocaleString() + '</td>';
+      const spacingFt = sp / 12;
+      const plf = calc.capacityPerStud / spacingFt;
+      row += `<td>${Math.round(plf).toLocaleString()}</td>`;
     });
-    tbody.innerHTML += row + '</tr>';
+
+    row += `</tr>`;
+    tbody.innerHTML += row;
   });
 }
 
 // ── Events ──
 document.getElementById('woodSpecies').addEventListener('change', updateRefTable);
+
 document.querySelectorAll('input[type="number"]').forEach(el => {
-  el.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') calculate();
+  });
 });
 
 updateRefTable();
