@@ -113,8 +113,8 @@
     @media (max-width: 860px) {
       .main { grid-template-columns: 1fr; padding: 16px; }
       .page-header { padding: 16px; }
-      .form-row { grid-template-columns: 1fr; }
-      .metrics { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr !important; }
+      .metrics { grid-template-columns: 1fr !important; }
     }
 
     /* Cards */
@@ -570,16 +570,15 @@
       </div>
     </div>
     <div class="code-badge">
-      <span>v2.0</span>
+      <span>v3.0</span>
       <span style="color:var(--border);">|</span>
-      <span>NDS 2018 ASD</span>
+      <span>NDS 3.9 Interaction</span>
     </div>
   </div>
 </header>
 
 <main class="main">
 
-  <!-- LEFT: INPUTS -->
   <div class="input-col">
     <div class="card">
       <div class="card-header">
@@ -595,12 +594,21 @@
           <input type="number" id="wallHeight" min="1" max="20" step="0.1" placeholder="e.g. 10">
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="supportedLoad">
-            Supported Load <span class="unit">plf</span>
-            <span class="help-tip" data-tip="Total service-level axial load from above (dead + live) per linear foot of wall. Typical single-story roof: 200-500 plf. Two-story bearing: 600-1200+ plf.">?</span>
-          </label>
-          <input type="number" id="supportedLoad" min="0" step="1" placeholder="e.g. 800">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="supportedLoad">
+              Axial Load <span class="unit">plf</span>
+              <span class="help-tip" data-tip="Total service-level axial gravity load from above (dead + live) per linear foot of wall.">?</span>
+            </label>
+            <input type="number" id="supportedLoad" min="0" step="1" placeholder="e.g. 800">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="windLoad">
+              Lateral Wind Load <span class="unit">psf</span>
+              <span class="help-tip" data-tip="Out-of-plane wind pressure. Enter 0 for an interior (purely axial) wall. If > 0, NDS 3.9 Combined Bending + Axial interaction is applied.">?</span>
+            </label>
+            <input type="number" id="windLoad" min="0" step="1" value="0" placeholder="e.g. 20">
+          </div>
         </div>
 
         <div class="form-row">
@@ -616,8 +624,8 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="loadDuration">
-              Load Duration
-              <span class="help-tip" data-tip="NDS CD factor. Normal (1.0) for typical occupancy loads. Two-Month (1.15) if snow controls. Wind/Seismic (1.6) for lateral load combinations.">?</span>
+              Load Duration (C<sub>D</sub>)
+              <span class="help-tip" data-tip="NDS CD factor. Normal (1.0) for typical gravity loads. Wind/Seismic (1.6) is recommended if analyzing combined wind loads.">?</span>
             </label>
             <select id="loadDuration">
               <option value="0.9">Permanent (0.9)</option>
@@ -632,7 +640,6 @@
         <div class="form-group">
           <label class="form-label" for="woodSpecies">
             Wood Species &amp; Grade
-            <span class="help-tip" data-tip="Values from NDS 2018 Supplement Tables 4A/4B for dimension lumber. Southern Pine has size-specific Fc values per Table 4B. All others use base Fc with CF size factor.">?</span>
           </label>
           <select id="woodSpecies">
             <option value="DFL2" selected>Douglas Fir-Larch No. 2</option>
@@ -643,22 +650,22 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="wallType">
-            Wall Type
-            <span class="help-tip" data-tip="Interior: pure axial compression check only. Exterior: applies a simplified 20% capacity reduction for combined axial + bending from wind. NOT a substitute for NDS §3.9 combined stress analysis.">?</span>
+          <label class="form-label" for="isBraced">
+            Weak-Axis Braced?
+            <span class="help-tip" data-tip="Are studs continuously supported along the weak axis (1.5&quot; face) by structural sheathing or drywall? If yes, buckling is governed by the strong axis.">?</span>
           </label>
-          <select id="wallType">
-            <option value="interior" selected>Interior (Axial Only)</option>
-            <option value="exterior">Exterior (20% Wind Reduction)</option>
+          <select id="isBraced">
+            <option value="yes" selected>Yes (Sheathed)</option>
+            <option value="no">No (Unbraced)</option>
           </select>
         </div>
 
         <div class="btn-group">
-          <button class="btn btn-primary" id="calcBtn" onclick="calculate()">
+          <button class="btn btn-primary" id="calcBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             Calculate
           </button>
-          <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+          <button class="btn btn-secondary" id="resetBtn">Reset</button>
         </div>
 
         <div class="error-msg" id="errorMsg">
@@ -668,11 +675,10 @@
       </div>
     </div>
 
-    <!-- Reference Table -->
     <div class="card ref-table-card">
       <div class="card-header">
         <span class="card-title">Reference Capacities @ 10 ft</span>
-        <span style="font-size:0.72rem; color:var(--text-tertiary);">plf, C<sub>D</sub>=1.0, axial</span>
+        <span style="font-size:0.72rem; color:var(--text-tertiary);">plf, Axial only, C<sub>D</sub>=1.0</span>
       </div>
       <div class="card-body">
         <table class="ref-table" id="refTable">
@@ -690,7 +696,6 @@
     </div>
   </div>
 
-  <!-- RIGHT: RESULTS -->
   <div class="results-col">
     <div class="card" id="emptyState">
       <div class="card-body" style="text-align:center; padding: 60px 40px;">
@@ -715,18 +720,18 @@
             <div class="metric-label">Recommended</div>
           </div>
           <div class="metric">
-            <div class="metric-value" id="mCapacity"></div>
-            <div class="metric-label">Capacity (plf)</div>
+            <div class="metric-value" id="mInteraction"></div>
+            <div class="metric-label" id="mInteractionLabel">Interaction Ratio</div>
           </div>
           <div class="metric">
-            <div class="metric-value" id="mDemand"></div>
-            <div class="metric-label">Demand (plf)</div>
+            <div class="metric-value" id="mStatus"></div>
+            <div class="metric-label">Status</div>
           </div>
         </div>
 
         <div class="utilization-section" id="utilSection">
           <div class="util-header">
-            <span class="util-label">Demand / Capacity Ratio</span>
+            <span class="util-label">Maximum D/C Ratio (Utilization)</span>
             <span class="util-pct" id="utilPct"></span>
           </div>
           <div class="util-bar-track">
@@ -741,8 +746,8 @@
 
         <div id="alertsContainer"></div>
 
-        <button class="breakdown-toggle" id="breakdownToggle" onclick="toggleBreakdown()">
-          <span>Calculation Breakdown (NDS 2018 &sect;3.7)</span>
+        <button class="breakdown-toggle" id="breakdownToggle">
+          <span>Calculation Breakdown (NDS 2018 &sect;3.7 &amp; &sect;3.9)</span>
           <span class="arrow">&#9660;</span>
         </button>
         <div class="breakdown-content" id="breakdownContent"></div>
@@ -750,131 +755,136 @@
     </div>
 
     <div class="disclaimer">
-      <strong>Disclaimer:</strong> This tool provides estimates per IRC 2021 prescriptive provisions and NDS 2018 ASD for axial compression in dimension lumber studs. It does <strong>not</strong> check combined bending + axial interaction (NDS &sect;3.9), lateral/shear forces, eccentric loading, or seismic provisions. The exterior &ldquo;wind adjustment&rdquo; is a simplified 20% reduction &mdash; a full wind analysis per ASCE 7 is required for exterior wall design. Verify all designs with a licensed structural engineer and local code requirements. <strong>Oasis Engineering LLC assumes no liability for use of this tool.</strong>
+      <strong>Disclaimer:</strong> This tool provides estimates per IRC 2021 prescriptive provisions and NDS 2018 ASD for dimensional lumber studs. It includes checks for pure axial compression (NDS &sect;3.7) and combined out-of-plane wind bending + axial compression (NDS &sect;3.9). Bending calculations assume the compression edge is continuously supported by sheathing ($C_L=1.0$). Verification of lateral/shear forces, connections, and system deflection is required. <strong>Oasis Engineering LLC assumes no liability for use of this tool.</strong> Verify all designs with a licensed structural engineer.
     </div>
   </div>
 </main>
 <script>
-/*  ═══════════════════════════════════════════════════════════
-    NDS 2018 SUPPLEMENT DATA — REVISED
-    Notes:
-    - Weak-axis slenderness now controls compression stability.
-    - Slenderness > 50 is treated as automatic failure.
-    - Exterior wall option remains a rough screening reduction only.
-    - This is still NOT a substitute for full combined axial + bending design.
+/* ═══════════════════════════════════════════════════════════
+    NDS 2018 SUPPLEMENT DATA — v3.0 (Combined Stress)
     ═══════════════════════════════════════════════════════════
 */
 
 const SPECIES = {
   DFL2: {
     name: "Douglas Fir-Larch No. 2",
-    Fc_base: 1350,
-    Emin: 580000,
-    cfType: "standard"
+    Fc_base: 1350, Fb_base: 900, Emin: 580000, cfType: "standard"
   },
   SP2: {
     name: "Southern Pine No. 2",
     Fc_bySize: { "2x4": 1650, "2x6": 1600, "2x8": 1550, "2x10": 1500 },
-    Emin: 510000,
-    cfType: "included"
+    Fb_bySize: { "2x4": 1500, "2x6": 1250, "2x8": 1200, "2x10": 1050 },
+    Emin: 510000, cfType: "included"
   },
   HF2: {
     name: "Hem-Fir No. 2",
-    Fc_base: 1300,
-    Emin: 470000,
-    cfType: "standard"
+    Fc_base: 1300, Fb_base: 850, Emin: 470000, cfType: "standard"
   },
   SPF2: {
     name: "Spruce-Pine-Fir No. 2",
-    Fc_base: 1150,
-    Emin: 440000,
-    cfType: "standard"
+    Fc_base: 1150, Fb_base: 875, Emin: 440000, cfType: "standard"
   }
 };
 
 const CF_FC = { "2x4": 1.15, "2x6": 1.10, "2x8": 1.05, "2x10": 1.00 };
+const CF_FB = { "2x4": 1.50, "2x6": 1.30, "2x8": 1.20, "2x10": 1.10 };
 
 const STUDS = {
-  "2x4":  { b: 1.5, d: 3.5,  A: 5.25   },
-  "2x6":  { b: 1.5, d: 5.5,  A: 8.25   },
-  "2x8":  { b: 1.5, d: 7.25, A: 10.875 },
-  "2x10": { b: 1.5, d: 9.25, A: 13.875 }
+  "2x4":  { b: 1.5, d: 3.5,   A: 5.25,   S: 3.0625  },
+  "2x6":  { b: 1.5, d: 5.5,   A: 8.25,   S: 7.5625  },
+  "2x8":  { b: 1.5, d: 7.25,  A: 10.875, S: 13.1406 },
+  "2x10": { b: 1.5, d: 9.25,  A: 13.875, S: 21.3906 }
 };
 
 const SIZES = ["2x4", "2x6", "2x8", "2x10"];
 
-// ── NDS §3.7 Column Stability Calculation ──
-// IMPORTANT: For stud compression stability, weak-axis/slenderness control is used here.
-// This is intentionally conservative relative to assuming buckling about the strong axis.
-
-function calcStud(size, species, heightFt, CD) {
+// ── Master Stud Calculation ──
+function calcStud(size, species, heightFt, CD, isBraced, loadPerStud, wind_psf, spacing_in) {
   const sp = SPECIES[species];
   const stud = STUDS[size];
 
-  // Effective length assumption
+  // 1. Column Stability & Slenderness
   const Ke = 1.0;
   const le = Ke * heightFt * 12;
-
-  // Weak-axis / least dimension governs for slenderness screening
-  const leastDim = Math.min(stud.b, stud.d);
+  const leastDim = isBraced ? stud.d : stud.b;
   const slenderness = le / leastDim;
-
-  // NDS slenderness limit
   const slendernessOK = slenderness <= 50;
 
-  let Fc_base;
-  if (sp.cfType === "included") {
-    Fc_base = sp.Fc_bySize[size];
-  } else {
-    Fc_base = sp.Fc_base;
-  }
-
-  const CF = (sp.cfType === "standard") ? CF_FC[size] : 1.0;
-  const FcStar = Fc_base * CD * CF;
-  const EminPrime = sp.Emin;
-
-  // NDS column stability inputs
+  // 2. Axial Adjusted Value (F'c)
+  let Fc_base = sp.cfType === "included" ? sp.Fc_bySize[size] : sp.Fc_base;
+  const CF_c = (sp.cfType === "standard") ? CF_FC[size] : 1.0;
+  const FcStar = Fc_base * CD * CF_c;
+  
+  const EminPrime = sp.Emin * 1.0; // Assumes standard dry-use
   const KcE = 0.822;
   const c = 0.8;
 
-  const FcE = KcE * EminPrime / (slenderness * slenderness);
+  const FcE = KcE * EminPrime / Math.pow(slenderness, 2);
   const ratio = FcE / FcStar;
   const term1 = (1 + ratio) / (2 * c);
   const disc = Math.max(term1 * term1 - ratio / c, 0);
-  const Cp = term1 - Math.sqrt(disc);
+  const Cp = Math.min(term1 - Math.sqrt(disc), 1.0);
 
-  const FcPrime = FcStar * Cp;
-  const capacityPerStud = FcPrime * stud.A;
+  let FcPrime = 0;
+  if (slendernessOK) FcPrime = FcStar * Cp;
+
+  // Actual axial stress
+  let fc = loadPerStud / stud.A;
+  let axial_DCR = FcPrime > 0 ? fc / FcPrime : Infinity;
+
+  // 3. Bending Adjusted Value (F'b)
+  let fb = 0;
+  let FbPrime = 0;
+  let combined_DCR = 0;
+  let FcE1 = 0; // Strong axis Euler buckling stress (for NDS 3.9 interaction)
+  let Fb_base = 0;
+  let CF_b = 1.0;
+  let Cr = 1.15; // Repetitive member factor (assuming standard spacing)
+  let M_in_lbs = 0;
+
+  if (wind_psf > 0) {
+    Fb_base = sp.cfType === "included" ? sp.Fb_bySize[size] : sp.Fb_base;
+    CF_b = sp.cfType === "standard" ? CF_FB[size] : 1.0;
+    
+    // CL = 1.0 assumed due to sheathing
+    FbPrime = Fb_base * CD * CF_b * Cr;
+
+    const wind_plf_stud = wind_psf * (spacing_in / 12);
+    M_in_lbs = (wind_plf_stud * Math.pow(heightFt, 2) / 8) * 12;
+    fb = M_in_lbs / stud.S;
+
+    // Euler buckling stress about the axis of bending (strong axis)
+    const le1 = heightFt * 12; 
+    const slenderness_strong = le1 / stud.d;
+    FcE1 = KcE * EminPrime / Math.pow(slenderness_strong, 2);
+
+    // NDS 3.9-3 Combined Stress Interaction
+    if (fc >= FcE1 || !slendernessOK) {
+      combined_DCR = Infinity; // P-Delta instability
+    } else {
+      const axial_term = Math.pow(fc / FcPrime, 2);
+      const bending_term = fb / (FbPrime * (1 - (fc / FcE1)));
+      combined_DCR = axial_term + bending_term;
+    }
+  }
+
+  // Final Utilization is the max of pure axial vs. combined interaction
+  const final_utilization = wind_psf > 0 ? Math.max(axial_DCR, combined_DCR) : axial_DCR;
 
   return {
-    size,
-    species: sp.name,
-    Fc_base,
-    CF,
-    CD,
-    FcStar,
-    Emin: sp.Emin,
-    EminPrime,
-    Ke,
-    le,
-    d: stud.d,
-    b: stud.b,
-    A: stud.A,
-    leastDim,
-    slenderness,
-    slendernessOK,
-    KcE,
-    c,
-    FcE,
-    ratio,
-    Cp,
-    FcPrime,
-    capacityPerStud
+    size, species: sp.name, isBraced,
+    // Axial variables
+    Fc_base, CF_c, CD, FcStar, EminPrime, Ke, le, leastDim, slenderness, slendernessOK, KcE, c, FcE, Cp, FcPrime, fc, axial_DCR,
+    // Bending variables
+    wind_psf, Fb_base, CF_b, Cr, FbPrime, M_in_lbs, S: stud.S, fb, FcE1, combined_DCR,
+    // Final Output
+    A: stud.A, b: stud.b, d: stud.d,
+    utilization: final_utilization,
+    passes: (final_utilization <= 1.0) && slendernessOK
   };
 }
 
 // ── UI ──
-
 function showError(msg) {
   document.getElementById('errorText').textContent = msg;
   document.getElementById('errorMsg').classList.add('visible');
@@ -888,66 +898,31 @@ function calculate() {
 
   const h = parseFloat(document.getElementById('wallHeight').value);
   const load = parseFloat(document.getElementById('supportedLoad').value);
+  const wind = parseFloat(document.getElementById('windLoad').value);
   const spacing = parseInt(document.getElementById('studSpacing').value);
   const species = document.getElementById('woodSpecies').value;
   const CD = parseFloat(document.getElementById('loadDuration').value);
-  const wallType = document.getElementById('wallType').value;
+  const isBraced = document.getElementById('isBraced').value === 'yes';
 
-  if (isNaN(h) || h <= 0) {
-    showError("Enter a positive wall height.");
-    return;
-  }
-  if (isNaN(load) || load < 0) {
-    showError("Enter a non-negative supported load.");
-    return;
-  }
-  if (load === 0) {
-    showError("Supported load is zero — nothing to check.");
-    return;
-  }
+  if (isNaN(h) || h <= 0) { showError("Enter a positive wall height."); return; }
+  if (isNaN(load) || load < 0) { showError("Enter a non-negative axial load."); return; }
+  if (isNaN(wind) || wind < 0) { showError("Enter a non-negative wind load."); return; }
+  if (load === 0 && wind === 0) { showError("Axial and wind loads are both zero — nothing to check."); return; }
 
-  const spacingFt = spacing / 12;
-
-  // Service load per stud from wall load
-  const loadPerStud = load * spacingFt;
-
-  // Exterior wall option is ONLY a rough screening reduction
-  const windFactor = (wallType === "exterior") ? 0.80 : 1.0;
+  const loadPerStud = load * (spacing / 12);
 
   let results = [];
   let recommended = null;
 
   for (const size of SIZES) {
-    const calc = calcStud(size, species, h, CD);
-    const effectiveCapacity = calc.capacityPerStud * windFactor;
-    const utilization = loadPerStud / effectiveCapacity;
-    const plf = effectiveCapacity / spacingFt;
-
-    const passes = (utilization <= 1.0) && calc.slendernessOK;
-
-    const entry = {
-      ...calc,
-      windFactor,
-      effectiveCapacity,
-      loadPerStud,
-      utilization,
-      plf_capacity: plf,
-      passes
-    };
-
-    results.push(entry);
-
-    if (!recommended && entry.passes) {
-      recommended = entry;
-    }
+    const r = calcStud(size, species, h, CD, isBraced, loadPerStud, wind, spacing);
+    results.push(r);
+    if (!recommended && r.passes) recommended = r;
   }
 
-  // If nothing passes, show the largest size for comparison only
-  if (!recommended) {
-    recommended = results[results.length - 1];
-  }
+  if (!recommended) recommended = results[results.length - 1];
 
-  renderResults({ height: h, load, spacing, species, CD, wallType }, recommended, results);
+  renderResults({ height: h, load, wind, spacing, species, CD, isBraced }, recommended, results);
 }
 
 function renderResults(inp, rec, all) {
@@ -960,55 +935,59 @@ function renderResults(inp, rec, all) {
 
   const ok = rec.passes;
 
-  // Verdict
+  // Verdict UI
   document.getElementById('verdictBanner').className = 'verdict ' + (ok ? 'pass' : 'fail');
   document.getElementById('verdictIcon').textContent = ok ? '✓' : '✗';
 
   const spShort = SPECIES[inp.species].name.split(' No.')[0];
 
-  if (ok && inp.wallType === 'interior') {
+  if (ok && inp.wind === 0) {
     document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Adequate`;
-    document.getElementById('verdictSubtitle').textContent =
-      `Minimum stud size at ${inp.spacing}" o.c. for ${inp.load} plf axial screening load`;
-  } else if (ok && inp.wallType === 'exterior') {
-    document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Screening Pass`;
-    document.getElementById('verdictSubtitle').textContent =
-      `Preliminary only. Exterior walls still require full axial + bending / wind design as applicable.`;
+    document.getElementById('verdictSubtitle').textContent = `Passes NDS §3.7 axial column constraints for ${inp.load} plf.`;
+  } else if (ok && inp.wind > 0) {
+    document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Adequate`;
+    document.getElementById('verdictSubtitle').textContent = `Passes NDS §3.9 combined bending and axial constraints.`;
   } else {
-    document.getElementById('verdictTitle').textContent = `${rec.size} — Does Not Meet Requirements`;
-    document.getElementById('verdictSubtitle').textContent =
-      `No listed stud size passes both capacity and slenderness screening at these parameters.`;
+    document.getElementById('verdictTitle').textContent = `${rec.size} — Requirements Not Met`;
+    document.getElementById('verdictSubtitle').textContent = `No standard dimensional stud size passes at these parameters.`;
   }
 
-  // Metrics
+  // Metrics UI
   document.getElementById('mRecommended').textContent = rec.size;
-  document.getElementById('mCapacity').textContent = Math.round(rec.plf_capacity).toLocaleString();
-  document.getElementById('mDemand').textContent = Math.round(inp.load).toLocaleString();
+  
+  const dcrLabel = inp.wind > 0 ? "Interaction D/C" : "Axial D/C";
+  document.getElementById('mInteractionLabel').textContent = dcrLabel;
+  document.getElementById('mInteraction').textContent = rec.utilization === Infinity ? '>9.99' : rec.utilization.toFixed(2);
+  
+  document.getElementById('mStatus').textContent = ok ? 'PASS' : 'FAIL';
+  document.getElementById('mStatus').style.color = ok ? 'var(--pass)' : 'var(--fail)';
 
-  // Utilization
-  const utilPct = rec.utilization * 100;
+  // Utilization Bar
+  const utilPctDisplay = rec.utilization === Infinity ? '>999%' : (rec.utilization * 100).toFixed(1) + '%';
+  const utilPctValue = rec.utilization === Infinity ? 100 : rec.utilization * 100;
+  
   const cls = rec.utilization <= 0.75 ? 'util-low' : (rec.utilization <= 1.0 ? 'util-med' : 'util-high');
   document.getElementById('utilSection').className = 'utilization-section ' + cls;
-  document.getElementById('utilPct').textContent = utilPct.toFixed(1) + '%';
+  document.getElementById('utilPct').textContent = utilPctDisplay;
 
   const bar = document.getElementById('utilBar');
   bar.style.transition = 'none';
   bar.style.width = '0%';
-
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       bar.style.transition = 'width 600ms cubic-bezier(0.4,0,0.2,1)';
-      bar.style.width = Math.min(utilPct, 100) + '%';
+      bar.style.width = Math.min(utilPctValue, 100) + '%';
     });
   });
 
-  // All sizes
+  // Size Grid
   const el = document.getElementById('sizeRows');
   el.innerHTML = '';
 
   all.forEach(r => {
     const isRec = (r.size === rec.size) && r.passes;
-    const pct = r.utilization * 100;
+    const pctVal = r.utilization === Infinity ? 100 : r.utilization * 100;
+    const pctText = r.utilization === Infinity ? '>999%' : (r.utilization * 100).toFixed(0) + '%';
 
     let suffix = '';
     if (!r.slendernessOK) suffix = '<span class="rec-badge" style="background:#fde8e6;color:#b8372b;">slender</span>';
@@ -1018,9 +997,9 @@ function renderResults(inp, rec, all) {
       <div class="size-row ${r.passes ? 'pass-row' : 'fail-row'} ${isRec ? 'recommended' : ''}">
         <div class="size-name">${r.size}${suffix}</div>
         <div class="size-bar-track">
-          <div class="size-bar-fill" data-pct="${Math.min(pct, 100)}" style="width:0%"></div>
+          <div class="size-bar-fill" data-pct="${Math.min(pctVal, 100)}" style="width:0%"></div>
         </div>
-        <div class="size-pct">${pct.toFixed(0)}%</div>
+        <div class="size-pct">${pctText}</div>
       </div>`;
   });
 
@@ -1037,82 +1016,69 @@ function renderResults(inp, rec, all) {
   let alerts = '';
 
   if (inp.height > 10) {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      Heights above 10 ft exceed typical IRC prescriptive wall-height limits for bearing studs. Engineered review may be required by the AHJ.</div>`;
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Heights above 10 ft exceed typical IRC prescriptive wall limits. Engineered review may be required by the AHJ.</div>`;
   }
-
-  if (inp.height > 8) {
-    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
-      Taller stud walls may require additional lateral restraint, sheathing/bracing justification, or engineering review depending on the assembly and code path.</div>`;
+  if (inp.CD > 1.25 && inp.wind === 0) {
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Applying a Load Duration factor (C<sub>D</sub>) > 1.25 to a wall with 0 wind load suggests lateral force application to a gravity-only path. Verify load assumptions.</div>`;
   }
-
-  if (inp.wallType === 'exterior') {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      Exterior wall mode applies only a simplified 20% reduction for screening. This is not a substitute for full combined axial + bending analysis and site-specific wind design.</div>`;
+  if (inp.wind > 0 && inp.CD <= 1.0) {
+    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>For wind combinations, NDS allows C<sub>D</sub> = 1.6. Consider updating the Load Duration setting.</div>`;
   }
-
-  if (!ok) {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      No standard listed stud size passes this screening. Consider engineered studs, lower tributary load, shorter unbraced height, closer spacing, or alternate framing.</div>`;
-  }
-
   if (!rec.slendernessOK) {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>
-      Recommended comparison stud has l<sub>e</sub>/least dimension = ${rec.slenderness.toFixed(1)}, which exceeds the NDS limit of 50. This condition is not acceptable under this screening check.</div>`;
-  }
-
-  if (inp.load > 1500) {
-    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>
-      Input load exceeds 1,500 plf. Verify tributary width, load path, and service load assumptions. Heavy roof/floor systems or multi-story load paths may require engineered design.</div>`;
+    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Calculated slenderness l<sub>e</sub>/d = ${rec.slenderness.toFixed(1)}, exceeding the NDS limit of 50. Provide continuous weak-axis bracing.</div>`;
   }
 
   document.getElementById('alertsContainer').innerHTML = alerts;
-
   renderBreakdown(rec, inp);
 }
 
 function renderBreakdown(r, inp) {
-  const spacingFt = inp.spacing / 12;
-
-  document.getElementById('breakdownContent').innerHTML = `
+  const CpText = r.slendernessOK ? r.Cp.toFixed(4) : '<span style="color:var(--fail)">N/A (>50)</span>';
+  const FcPrimeText = r.slendernessOK ? r.FcPrime.toFixed(1) + ' psi' : '<span style="color:var(--fail)">0 psi</span>';
+  
+  let html = `
     <div class="calc-section-title">1. Material Properties</div>
     <div class="calc-line"><span class="calc-var">Species / Grade</span><span class="calc-val">${r.species}</span></div>
-    <div class="calc-line"><span class="calc-var">Base F<sub>c</sub></span><span class="calc-val">${r.Fc_base.toLocaleString()} psi</span></div>
-    <div class="calc-line"><span class="calc-var">E<sub>min</sub></span><span class="calc-val">${r.Emin.toLocaleString()} psi</span></div>
+    <div class="calc-line"><span class="calc-var">Base Compression (F<sub>c</sub>)</span><span class="calc-val">${r.Fc_base.toLocaleString()} psi</span></div>
+    ${inp.wind > 0 ? `<div class="calc-line"><span class="calc-var">Base Bending (F<sub>b</sub>)</span><span class="calc-val">${r.Fb_base.toLocaleString()} psi</span></div>` : ''}
+    <div class="calc-line"><span class="calc-var">Base E<sub>min</sub></span><span class="calc-val">${(r.EminPrime).toLocaleString()} psi</span></div>
 
-    <div class="calc-section-title">2. Stud Section — ${r.size}</div>
-    <div class="calc-line"><span class="calc-var">Actual dimensions</span><span class="calc-val">${r.b}" × ${r.d}"</span></div>
+    <div class="calc-section-title">2. Section Properties — ${r.size}</div>
     <div class="calc-line"><span class="calc-var">Area (A)</span><span class="calc-val">${r.A} in&sup2;</span></div>
-    <div class="calc-line"><span class="calc-var">Controlling dimension for slenderness</span><span class="calc-val">${r.leastDim}"</span></div>
+    ${inp.wind > 0 ? `<div class="calc-line"><span class="calc-var">Section Modulus (S)</span><span class="calc-val">${r.S.toFixed(4)} in&sup3;</span></div>` : ''}
+    <div class="calc-line"><span class="calc-var">Controlling Slenderness Dim.</span><span class="calc-val">${r.leastDim}" ${r.isBraced ? '(Strong)' : '(Weak)'}</span></div>
 
-    <div class="calc-section-title">3. Adjustment Factors</div>
-    <div class="calc-line"><span class="calc-var">C<sub>D</sub> (load duration)</span><span class="calc-val">${r.CD}</span></div>
-    <div class="calc-line"><span class="calc-var">C<sub>F</sub> (size factor)</span><span class="calc-val">${r.CF}${r.CF === 1.0 && SPECIES[inp.species].cfType === 'included' ? ' (included in tabulated F<sub>c</sub>)' : ''}</span></div>
-    <div class="calc-line"><span class="calc-var">Assumed C<sub>M</sub>, C<sub>t</sub>, C<sub>i</sub></span><span class="calc-val">1.0</span></div>
-    <div class="calc-line"><span class="calc-var">F<sub>c</sub>* = F<sub>c</sub> × C<sub>D</sub> × C<sub>F</sub></span><span class="calc-val">${r.Fc_base} × ${r.CD} × ${r.CF} = <strong>${r.FcStar.toFixed(0)} psi</strong></span></div>
-
-    <div class="calc-section-title">4. Column Stability</div>
-    <div class="calc-line"><span class="calc-var">K<sub>e</sub></span><span class="calc-val">${r.Ke}</span></div>
-    <div class="calc-line"><span class="calc-var">l<sub>e</sub> = K<sub>e</sub> × L</span><span class="calc-val">${r.le.toFixed(1)}"</span></div>
-    <div class="calc-line"><span class="calc-var">l<sub>e</sub> / least dimension</span><span class="calc-val">${r.slenderness.toFixed(2)}${!r.slendernessOK ? ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>' : ' &le; 50 &#10003;'}</span></div>
-    <div class="calc-line"><span class="calc-var">K<sub>cE</sub></span><span class="calc-val">${r.KcE}</span></div>
-    <div class="calc-line"><span class="calc-var">F<sub>cE</sub> = K<sub>cE</sub> × E'<sub>min</sub> / (l<sub>e</sub>/least dim.)&sup2;</span><span class="calc-val">${r.FcE.toFixed(1)} psi</span></div>
-    <div class="calc-line"><span class="calc-var">F<sub>cE</sub> / F<sub>c</sub>*</span><span class="calc-val">${r.ratio.toFixed(4)}</span></div>
-    <div class="calc-line"><span class="calc-var">c</span><span class="calc-val">${r.c}</span></div>
-    <div class="calc-line"><span class="calc-var"><strong>C<sub>p</sub></strong></span><span class="calc-val"><strong>${r.Cp.toFixed(4)}</strong></span></div>
-
-    <div class="calc-section-title">5. Adjusted Compression Capacity</div>
-    <div class="calc-line"><span class="calc-var">F'<sub>c</sub> = F<sub>c</sub>* × C<sub>p</sub></span><span class="calc-val">${r.FcStar.toFixed(0)} × ${r.Cp.toFixed(4)} = <strong>${r.FcPrime.toFixed(1)} psi</strong></span></div>
-    <div class="calc-line"><span class="calc-var">Capacity = F'<sub>c</sub> × A</span><span class="calc-val">${r.FcPrime.toFixed(1)} × ${r.A} = <strong>${r.capacityPerStud.toFixed(0)} lbs/stud</strong></span></div>
-    ${r.windFactor < 1.0 ? `<div class="calc-line"><span class="calc-var">Exterior screening reduction</span><span class="calc-val">× ${r.windFactor} → ${r.effectiveCapacity.toFixed(0)} lbs/stud</span></div>` : ''}
-
-    <div class="calc-section-title">6. Demand vs. Capacity</div>
-    <div class="calc-line"><span class="calc-var">Demand/stud = ${inp.load} plf × ${spacingFt.toFixed(4)} ft</span><span class="calc-val">${r.loadPerStud.toFixed(0)} lbs</span></div>
-    <div class="calc-line"><span class="calc-var">Capacity/stud</span><span class="calc-val">${r.effectiveCapacity.toFixed(0)} lbs</span></div>
-    <div class="calc-line"><span class="calc-var"><strong>D/C ratio</strong></span><span class="calc-val"><strong>${(r.utilization * 100).toFixed(1)}%</strong> ${r.utilization <= 1.0 ? '&le; 100% &#10003;' : '&gt; 100% &#10007;'}</span></div>
-    <div class="calc-line"><span class="calc-var">Slenderness status</span><span class="calc-val">${r.slendernessOK ? '&#10003; OK' : '&#10007; FAIL'}</span></div>
-    <div class="calc-line"><span class="calc-var">Wall capacity</span><span class="calc-val">${Math.round(r.plf_capacity).toLocaleString()} plf</span></div>
+    <div class="calc-section-title">3. Axial Stability (NDS 3.7)</div>
+    <div class="calc-line"><span class="calc-var">F<sub>c</sub>* = F<sub>c</sub> × C<sub>D</sub> × C<sub>F</sub></span><span class="calc-val">${r.FcStar.toFixed(0)} psi</span></div>
+    <div class="calc-line"><span class="calc-var">Slenderness l<sub>e</sub> / d</span><span class="calc-val">${r.slenderness.toFixed(2)}${!r.slendernessOK ? ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>' : ' &le; 50 &#10003;'}</span></div>
+    <div class="calc-line"><span class="calc-var">Euler Buckling F<sub>cE</sub></span><span class="calc-val">${r.FcE.toFixed(1)} psi</span></div>
+    <div class="calc-line"><span class="calc-var">Stability Factor C<sub>p</sub></span><span class="calc-val"><strong>${CpText}</strong></span></div>
+    <div class="calc-line"><span class="calc-var"><strong>Adjusted Capacity F'<sub>c</sub></strong></span><span class="calc-val"><strong>${FcPrimeText}</strong></span></div>
+    <div class="calc-line"><span class="calc-var">Actual Stress f<sub>c</sub> = P / A</span><span class="calc-val">${r.fc.toFixed(1)} psi</span></div>
   `;
+
+  if (inp.wind > 0) {
+    html += `
+      <div class="calc-section-title">4. Bending Stability (NDS 3.3.3)</div>
+      <div class="calc-line"><span class="calc-var">Assumed Bending Factors</span><span class="calc-val">C<sub>L</sub>=1.0, C<sub>r</sub>=1.15</span></div>
+      <div class="calc-line"><span class="calc-var"><strong>Adjusted Capacity F'<sub>b</sub></strong></span><span class="calc-val"><strong>${r.FbPrime.toFixed(1)} psi</strong></span></div>
+      <div class="calc-line"><span class="calc-var">Wind Moment (M)</span><span class="calc-val">${r.M_in_lbs.toFixed(0)} lb-in</span></div>
+      <div class="calc-line"><span class="calc-var">Actual Stress f<sub>b</sub> = M / S</span><span class="calc-val">${r.fb.toFixed(1)} psi</span></div>
+
+      <div class="calc-section-title">5. Combined Stress (NDS Eq 3.9-3)</div>
+      <div class="calc-line"><span class="calc-var">Strong-Axis Euler F<sub>cE1</sub></span><span class="calc-val">${r.FcE1.toFixed(1)} psi</span></div>
+      <div class="calc-line"><span class="calc-var">Axial Ratio: (f<sub>c</sub> / F'<sub>c</sub>)&sup2;</span><span class="calc-val">${Math.pow(r.fc / r.FcPrime, 2).toFixed(3)}</span></div>
+      <div class="calc-line"><span class="calc-var">Amplification: 1 - (f<sub>c</sub> / F<sub>cE1</sub>)</span><span class="calc-val">${(1 - (r.fc / r.FcE1)).toFixed(3)}</span></div>
+      <div class="calc-line"><span class="calc-var"><strong>Interaction Ratio D/C</strong></span><span class="calc-val"><strong>${r.combined_DCR === Infinity ? '>9.99' : r.combined_DCR.toFixed(3)}</strong></span></div>
+    `;
+  } else {
+    html += `
+      <div class="calc-section-title">4. Demand vs. Capacity</div>
+      <div class="calc-line"><span class="calc-var"><strong>Axial Ratio D/C</strong></span><span class="calc-val"><strong>${r.axial_DCR === Infinity ? '>9.99' : r.axial_DCR.toFixed(3)}</strong></span></div>
+    `;
+  }
+
+  document.getElementById('breakdownContent').innerHTML = html;
 }
 
 function toggleBreakdown() {
@@ -1123,10 +1089,11 @@ function toggleBreakdown() {
 function resetAll() {
   document.getElementById('wallHeight').value = '';
   document.getElementById('supportedLoad').value = '';
+  document.getElementById('windLoad').value = '0';
   document.getElementById('studSpacing').value = '16';
   document.getElementById('loadDuration').value = '1.0';
   document.getElementById('woodSpecies').value = 'DFL2';
-  document.getElementById('wallType').value = 'interior';
+  document.getElementById('isBraced').value = 'yes';
 
   hideError();
   document.getElementById('resultsPanel').classList.remove('visible');
@@ -1136,21 +1103,21 @@ function resetAll() {
 }
 
 // ── Reference Table ──
-// Still a simplified axial screening table at 10 ft, dry-use assumptions, Ke = 1.0
-
 function updateRefTable() {
   const species = document.getElementById('woodSpecies').value;
   const tbody = document.getElementById('refTableBody');
   tbody.innerHTML = '';
 
   SIZES.forEach(size => {
-    const calc = calcStud(size, species, 10, 1.0);
-
+    // Reference table is axial only, 10ft, braced
+    const calc = calcStud(size, species, 10, 1.0, true, 0, 0, 16); 
     let row = `<tr><td>${size}</td>`;
 
     [12, 16, 24].forEach(sp => {
+      // Back-calculate capacity plf from pure axial strength
       const spacingFt = sp / 12;
-      const plf = calc.capacityPerStud / spacingFt;
+      const capacityStud = calc.FcPrime * calc.A;
+      const plf = capacityStud / spacingFt;
       row += `<td>${Math.round(plf).toLocaleString()}</td>`;
     });
 
@@ -1160,6 +1127,9 @@ function updateRefTable() {
 }
 
 // ── Events ──
+document.getElementById('calcBtn').addEventListener('click', calculate);
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+document.getElementById('breakdownToggle').addEventListener('click', toggleBreakdown);
 document.getElementById('woodSpecies').addEventListener('change', updateRefTable);
 
 document.querySelectorAll('input[type="number"]').forEach(el => {
