@@ -1067,19 +1067,33 @@ function hideError() {
   document.getElementById('errorMsg').classList.remove('visible');
 }
 
-// Simulated Usage Counter Logic
-let localCalcCount = 12430;
+// ── Real-Time Usage Counter ──
+const counterNamespace = "oasisengineering";
+const counterName = "wallcalc";
 
+// 1. Fetch the live count as soon as the page loads
+fetch(`https://api.counterapi.dev/v1/${counterNamespace}/${counterName}`)
+  .then(response => response.json())
+  .then(data => {
+    // If the counter doesn't exist yet, it will return 0
+    let count = data.count || 0;
+    // Let's add a "base" number so it doesn't start at 0 and look empty
+    // You can change 1200 to whatever you want your starting "seed" to be!
+    let displayCount = count + 1200; 
+    document.getElementById('usageCount').textContent = displayCount.toLocaleString();
+  })
+  .catch(err => console.error("Counter fetch error:", err));
+
+// 2. Increment the count whenever someone clicks "Calculate"
 function incrementUsageCounter() {
-  localCalcCount++;
-  document.getElementById('usageCount').textContent = localCalcCount.toLocaleString();
-  
-  // Real implementation: POST to your backend here
-  /*
-  fetch('/api/calc-use', { method: 'POST' });
-  */
+  fetch(`https://api.counterapi.dev/v1/${counterNamespace}/${counterName}/up`)
+    .then(response => response.json())
+    .then(data => {
+      let displayCount = data.count + 1200;
+      document.getElementById('usageCount').textContent = displayCount.toLocaleString();
+    })
+    .catch(err => console.error("Counter increment error:", err));
 }
-
 // Initialize real-time count
 /*
 fetch('/api/calc-count')
