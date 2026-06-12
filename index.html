@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IRC 2021 Residential Load-Bearing Wall Calculator — Oasis Engineering</title>
-  <meta name="description" content="Free engineering calculator for IRC 2021 and NDS 2018 residential wood stud wall design. Checks axial compression and combined wind bending.">
-  
+  <meta name="description" content="Free engineering calculator for IRC 2021 and NDS 2018 residential wood stud wall design. Checks gravity axial compression (NDS 3.7) and combined wind bending + axial (NDS 3.9) with shareable results.">
+  <link rel="canonical" href="https://oasisengineering.com/res-wood-wall-bearing-calculator/">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+
   <script type="application/ld+json">
   {
    "@context": "https://schema.org",
@@ -16,7 +17,8 @@
    "name": "Residential Load-Bearing Wall Calculator",
    "applicationCategory": "EngineeringTool",
    "operatingSystem": "Web",
-   "description": "IRC 2021 and NDS 2018 stud wall design calculator for axial and combined bending loads.",
+   "softwareVersion": "4.0",
+   "description": "IRC 2021 and NDS 2018 stud wall design calculator. Dual load-case check: gravity axial compression per NDS 3.7 and combined wind bending + axial per NDS 3.9.",
    "author": {
      "@type": "Organization",
      "name": "Oasis Engineering",
@@ -73,6 +75,10 @@
       flex-direction: column;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+
     /* Header */
     .page-header {
       background: var(--surface);
@@ -88,11 +94,7 @@
       gap: 16px;
       flex-wrap: wrap;
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .brand { display: flex; align-items: center; gap: 12px; }
     .brand-icon {
       width: 36px; height: 36px;
       background: var(--accent);
@@ -112,13 +114,9 @@
       color: var(--text-tertiary);
       font-weight: 500;
     }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
     .usage-badge {
-      display: inline-flex;
+      display: none;
       align-items: center;
       gap: 6px;
       font-size: 0.75rem;
@@ -129,6 +127,7 @@
       border-radius: 6px;
       border: 1px solid rgba(160,108,26,0.15);
     }
+    .usage-badge.live { display: inline-flex; }
     .code-badge {
       display: inline-flex;
       align-items: center;
@@ -161,6 +160,7 @@
       .header-actions { width: 100%; justify-content: space-between; margin-top: 8px; }
       .form-row { grid-template-columns: 1fr !important; }
       .metrics { grid-template-columns: 1fr !important; }
+      .cta { margin: 24px 16px 0; }
     }
 
     /* Cards */
@@ -178,6 +178,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .card-title {
       font-size: 0.82rem;
@@ -220,7 +222,8 @@
       flex-shrink: 0;
       position: relative;
     }
-    .help-tip:hover::after {
+    .help-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .help-tip:hover::after, .help-tip:focus-visible::after {
       content: attr(data-tip);
       position: absolute;
       bottom: calc(100% + 8px);
@@ -233,7 +236,7 @@
       font-size: 0.75rem;
       font-weight: 400;
       white-space: normal;
-      width: 240px;
+      width: 250px;
       line-height: 1.5;
       z-index: 99;
       pointer-events: none;
@@ -265,11 +268,7 @@
       padding-right: 32px;
       cursor: pointer;
     }
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
     /* Buttons */
     .btn-group { display: flex; gap: 8px; margin-top: 20px; }
@@ -288,10 +287,8 @@
       justify-content: center;
       gap: 6px;
     }
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-    }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-primary { background: var(--accent); color: white; }
     .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
     .btn-primary:active { transform: translateY(0); }
     .btn-secondary {
@@ -319,10 +316,7 @@
       color: var(--text);
       border: 1px solid var(--border);
     }
-    .btn-action:hover {
-      background: var(--border-light);
-      border-color: #d0caca;
-    }
+    .btn-action:hover { background: var(--border-light); border-color: #d0caca; }
 
     /* Error */
     .error-msg {
@@ -360,18 +354,10 @@
     }
     .verdict.pass .verdict-icon { background: var(--pass-bg); color: var(--pass); }
     .verdict.fail .verdict-icon { background: var(--fail-bg); color: var(--fail); }
-    .verdict-text h3 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
+    .verdict-text h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
     .verdict.pass h3 { color: var(--pass); }
     .verdict.fail h3 { color: var(--fail); }
-    .verdict-text p {
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
+    .verdict-text p { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
 
     .metrics {
       display: grid;
@@ -379,11 +365,7 @@
       gap: 1px;
       background: var(--border-light);
     }
-    .metric {
-      padding: 16px 20px;
-      background: var(--surface);
-      text-align: center;
-    }
+    .metric { padding: 16px 20px; background: var(--surface); text-align: center; }
     .metric-value {
       font-family: var(--mono);
       font-size: 1.25rem;
@@ -408,11 +390,7 @@
       margin-bottom: 10px;
     }
     .util-label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
-    .util-pct {
-      font-family: var(--mono);
-      font-size: 1rem;
-      font-weight: 600;
-    }
+    .util-pct { font-family: var(--mono); font-size: 1rem; font-weight: 600; }
     .util-bar-track {
       width: 100%;
       height: 10px;
@@ -443,18 +421,14 @@
     }
     .size-row {
       display: grid;
-      grid-template-columns: 72px 1fr 58px;
+      grid-template-columns: 92px 1fr 58px;
       gap: 12px;
       align-items: center;
       padding: 10px 0;
       border-bottom: 1px solid var(--border-light);
     }
     .size-row:last-child { border-bottom: none; }
-    .size-name {
-      font-family: var(--mono);
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
+    .size-name { font-family: var(--mono); font-weight: 600; font-size: 0.85rem; }
     .size-row.recommended .size-name { color: var(--accent); }
     .size-bar-track {
       height: 8px;
@@ -463,19 +437,10 @@
       overflow: hidden;
       border: 1px solid var(--border-light);
     }
-    .size-bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 800ms cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    .size-bar-fill { height: 100%; border-radius: 4px; transition: width 800ms cubic-bezier(0.4, 0, 0.2, 1); }
     .size-row.pass-row .size-bar-fill { background: var(--pass); }
     .size-row.fail-row .size-bar-fill { background: var(--fail); }
-    .size-pct {
-      font-family: var(--mono);
-      font-size: 0.78rem;
-      font-weight: 600;
-      text-align: right;
-    }
+    .size-pct { font-family: var(--mono); font-size: 0.78rem; font-weight: 600; text-align: right; }
     .size-row.pass-row .size-pct { color: var(--pass); }
     .size-row.fail-row .size-pct { color: var(--fail); }
     .rec-badge {
@@ -524,6 +489,7 @@
       transition: background var(--transition);
     }
     .breakdown-toggle:hover { background: var(--border-light); }
+    .breakdown-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     .breakdown-toggle .arrow { transition: transform var(--transition); font-size: 0.7rem; }
     .breakdown-toggle.open .arrow { transform: rotate(180deg); }
 
@@ -564,14 +530,11 @@
       letter-spacing: 0.05em;
     }
     .calc-section-title:first-child { margin-top: 0; }
+    .calc-note { font-size: 0.75rem; color: var(--text-tertiary); margin: 6px 0 2px; line-height: 1.5; }
 
     /* Reference table */
     .ref-table-card .card-body { padding: 0; overflow-x: auto; }
-    .ref-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     .ref-table th {
       padding: 10px 16px;
       text-align: center;
@@ -591,17 +554,65 @@
       border-bottom: 1px solid var(--border-light);
       color: var(--text);
     }
-    .ref-table th:first-child, .ref-table td:first-child {
-      text-align: left;
-      font-weight: 600;
-    }
+    .ref-table th:first-child, .ref-table td:first-child { text-align: left; font-weight: 600; }
     .ref-table tr:last-child td { border-bottom: none; }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      line-height: 1.65;
+    }
+    .disclaimer strong { color: var(--text-secondary); }
+
+    /* CTA */
+    .cta {
+      max-width: 1080px;
+      margin: 40px auto 0;
+      padding: 40px 24px;
+      background: var(--accent-light);
+      border: 1px solid rgba(26,92,76,0.15);
+      border-radius: var(--radius);
+      text-align: center;
+    }
+    .cta h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 12px; font-weight: 700; letter-spacing: -0.01em; }
+    .cta p { font-size: 0.95rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto 24px; line-height: 1.6; }
+    .cta-chips { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+    .cta-chips span {
+      background: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: background var(--transition), transform var(--transition);
+      box-shadow: var(--shadow);
+    }
+    .cta-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
     /* Main Footer */
     .site-footer {
       max-width: 1080px;
       margin: 0 auto;
       padding: 24px;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -616,6 +627,7 @@
       font-size: 0.82rem;
       color: var(--text-secondary);
       font-weight: 500;
+      flex-wrap: wrap;
     }
     .feedback-btn {
       background: var(--surface);
@@ -624,20 +636,13 @@
       border-radius: 20px;
       cursor: pointer;
       font-size: 0.82rem;
+      font-family: var(--sans);
       transition: all var(--transition);
     }
     .feedback-btn:hover { background: var(--surface-alt); border-color: var(--text-tertiary); }
     .feedback-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
-    
-    .footer-credits {
-      font-size: 0.82rem;
-      color: var(--text-tertiary);
-    }
-    .footer-credits a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
-    }
+    .footer-credits { font-size: 0.82rem; color: var(--text-tertiary); }
+    .footer-credits a { color: var(--accent); text-decoration: none; font-weight: 600; }
     .footer-credits a:hover { text-decoration: underline; }
 
     /* Toast Notification */
@@ -656,27 +661,29 @@
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 1000;
       box-shadow: var(--shadow-lg);
+      max-width: calc(100vw - 48px);
+      text-align: center;
     }
-    .toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
     @keyframes fadeSlideIn {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .print-only { display: none; }
+
     /* Print Styles */
     @media print {
       body { background: white; font-size: 11pt; }
-      .site-footer, .action-bar, .header-actions, .input-col { display: none !important; }
+      .site-footer, .action-bar, .header-actions, .input-col, .cta, .empty-card { display: none !important; }
       .main { display: block; max-width: 100%; padding: 0; }
       .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; margin-bottom: 16px; }
       .breakdown-toggle { display: none; }
       .breakdown-content { display: block !important; border-top: none; padding: 0 20px 20px; }
-      .results-panel { display: block !important; }
       .page-header { border-bottom: 2px solid #333; padding: 0 0 16px 0; margin-bottom: 24px; }
+      .print-only { display: block; padding: 10px 20px; font-size: 0.75rem; color: #555; border-top: 1px solid #ddd; }
+      .util-bar-fill, .size-bar-fill { transition: none !important; }
     }
   </style>
 </head>
@@ -692,11 +699,11 @@
       </div>
     </div>
     <div class="header-actions">
-      <div class="usage-badge" id="usageBadge" title="Calculations run globally">
-        ⚡ <span id="usageCount">12,430</span> calculations run
+      <div class="usage-badge" id="usageBadge" title="Calculations run by visitors of this page">
+        ⚡ <span id="usageCount">—</span> calculations run
       </div>
       <div class="code-badge">
-        <span>v3.2</span>
+        <span>v4.0</span>
         <span style="color:var(--border);">|</span>
         <span>NDS ASD</span>
       </div>
@@ -716,25 +723,25 @@
         <div class="form-group">
           <label class="form-label" for="wallHeight">
             Wall Height <span class="unit">ft</span>
-            <span class="help-tip" data-tip="Stud clear height. IRC prescriptive limit is 10 ft for bearing studs (R602.3.1). Heights above 10 ft may require engineered design per the local AHJ.">?</span>
+            <span class="help-tip" tabindex="0" data-tip="Stud clear height. IRC prescriptive limit is 10 ft for bearing studs (R602.3.1). Heights above 10 ft may require engineered design per the local AHJ.">?</span>
           </label>
-          <input type="number" id="wallHeight" min="1" max="20" step="0.1" placeholder="e.g. 10">
+          <input type="number" id="wallHeight" min="1" max="20" step="0.1" inputmode="decimal" placeholder="e.g. 10">
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label" for="supportedLoad">
               Axial Load <span class="unit">plf</span>
-              <span class="help-tip" data-tip="Total service-level axial gravity load from above (dead + live) per linear foot of wall.">?</span>
+              <span class="help-tip" tabindex="0" data-tip="Total service-level axial gravity load from above (dead + live) per linear foot of wall.">?</span>
             </label>
-            <input type="number" id="supportedLoad" min="0" step="1" placeholder="e.g. 800">
+            <input type="number" id="supportedLoad" min="0" step="1" inputmode="decimal" placeholder="e.g. 800">
           </div>
           <div class="form-group">
             <label class="form-label" for="windLoad">
               Lateral Wind Load <span class="unit">psf</span>
-              <span class="help-tip" data-tip="Out-of-plane wind pressure. Enter 0 for an interior (purely axial) wall. If > 0, NDS 3.9 Combined Bending + Axial interaction is applied.">?</span>
+              <span class="help-tip" tabindex="0" data-tip="Out-of-plane wind pressure at ASD level (if starting from ASCE 7 strength-level C&amp;C pressure, multiply by 0.6). Enter 0 for an interior wall. If &gt; 0, NDS 3.9 combined bending + axial is checked automatically with CD = 1.6.">?</span>
             </label>
-            <input type="number" id="windLoad" min="0" step="1" value="0" placeholder="e.g. 20">
+            <input type="number" id="windLoad" min="0" step="1" value="0" inputmode="decimal" placeholder="e.g. 20">
           </div>
         </div>
 
@@ -751,15 +758,14 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="loadDuration">
-              Load Duration (C<sub>D</sub>)
-              <span class="help-tip" data-tip="NDS CD factor. Normal (1.0) for typical gravity loads. Wind/Seismic (1.6) is recommended if analyzing combined wind loads.">?</span>
+              Gravity C<sub>D</sub>
+              <span class="help-tip" tabindex="0" data-tip="NDS load duration factor applied to the gravity (axial-only) load case. The wind combined case automatically uses CD = 1.6 per NDS Table 2.3.2, so it is not an option here.">?</span>
             </label>
             <select id="loadDuration">
               <option value="0.9">Permanent (0.9)</option>
               <option value="1.0" selected>Normal (1.0)</option>
               <option value="1.15">Two-Month / Snow (1.15)</option>
               <option value="1.25">7-Day (1.25)</option>
-              <option value="1.6">Wind / Seismic (1.6)</option>
             </select>
           </div>
         </div>
@@ -779,7 +785,7 @@
         <div class="form-group">
           <label class="form-label" for="isBraced">
             Weak-Axis Braced?
-            <span class="help-tip" data-tip="Are studs continuously supported along the weak axis (1.5&quot; face) by structural sheathing or drywall? If yes, buckling is governed by the strong axis.">?</span>
+            <span class="help-tip" tabindex="0" data-tip="Are studs continuously supported along the weak axis (1.5&quot; face) by structural sheathing or drywall? If yes, buckling is governed by the strong axis.">?</span>
           </label>
           <select id="isBraced">
             <option value="yes" selected>Yes (Sheathed)</option>
@@ -788,15 +794,15 @@
         </div>
 
         <div class="btn-group">
-          <button class="btn btn-primary" id="calcBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <button type="button" class="btn btn-primary" id="calcBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             Calculate
           </button>
-          <button class="btn btn-secondary" id="resetBtn">Reset</button>
+          <button type="button" class="btn btn-secondary" id="resetBtn">Reset</button>
         </div>
 
-        <div class="error-msg" id="errorMsg">
-          <span>&#9888;</span>
+        <div class="error-msg" id="errorMsg" role="alert">
+          <span aria-hidden="true">&#9888;</span>
           <span id="errorText"></span>
         </div>
       </div>
@@ -805,16 +811,16 @@
     <div class="card ref-table-card">
       <div class="card-header">
         <span class="card-title">Reference Capacities @ 10 ft</span>
-        <span style="font-size:0.72rem; color:var(--text-tertiary);">plf, Axial only, C<sub>D</sub>=1.0</span>
+        <span style="font-size:0.72rem; color:var(--text-tertiary);">plf, axial only, C<sub>D</sub>=1.0, sheathed</span>
       </div>
       <div class="card-body">
         <table class="ref-table" id="refTable">
           <thead>
             <tr>
-              <th>Size</th>
-              <th>12" o.c.</th>
-              <th>16" o.c.</th>
-              <th>24" o.c.</th>
+              <th scope="col">Size</th>
+              <th scope="col">12" o.c.</th>
+              <th scope="col">16" o.c.</th>
+              <th scope="col">24" o.c.</th>
             </tr>
           </thead>
           <tbody id="refTableBody"></tbody>
@@ -823,18 +829,18 @@
     </div>
   </div>
 
-  <div class="results-col">
-    <div class="card" id="emptyState">
+  <div class="results-col" aria-live="polite">
+    <div class="card empty-card" id="emptyState">
       <div class="card-body" style="text-align:center; padding: 60px 40px;">
-        <div style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.15;">&#9645;</div>
-        <p style="color: var(--text-tertiary); font-size: 0.88rem;">Enter wall parameters and click <strong style="color:var(--text-secondary);">Calculate</strong> to see results.</p>
+        <div style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.15;" aria-hidden="true">&#9645;</div>
+        <p style="color: var(--text-tertiary); font-size: 0.88rem;">Enter wall parameters and select <strong style="color:var(--text-secondary);">Calculate</strong> to see results.</p>
       </div>
     </div>
 
     <div class="results-panel" id="resultsPanel">
       <div class="card">
         <div class="verdict" id="verdictBanner">
-          <div class="verdict-icon" id="verdictIcon"></div>
+          <div class="verdict-icon" id="verdictIcon" aria-hidden="true"></div>
           <div class="verdict-text">
             <h3 id="verdictTitle"></h3>
             <p id="verdictSubtitle"></p>
@@ -848,7 +854,7 @@
           </div>
           <div class="metric">
             <div class="metric-value" id="mInteraction"></div>
-            <div class="metric-label" id="mInteractionLabel">Interaction Ratio</div>
+            <div class="metric-label" id="mInteractionLabel">Governing D/C</div>
           </div>
           <div class="metric">
             <div class="metric-value" id="mStatus"></div>
@@ -858,7 +864,7 @@
 
         <div class="utilization-section" id="utilSection">
           <div class="util-header">
-            <span class="util-label">Maximum D/C Ratio (Utilization)</span>
+            <span class="util-label">Governing D/C Ratio (Utilization)</span>
             <span class="util-pct" id="utilPct"></span>
           </div>
           <div class="util-bar-track">
@@ -867,74 +873,72 @@
         </div>
 
         <div class="sizes-grid" id="sizesGrid">
-          <h4>All Stud Sizes &mdash; Utilization</h4>
+          <h4>All Stud Sizes &mdash; Governing Utilization</h4>
           <div id="sizeRows"></div>
         </div>
 
         <div id="alertsContainer"></div>
 
-        <button class="breakdown-toggle" id="breakdownToggle">
+        <button type="button" class="breakdown-toggle" id="breakdownToggle" aria-expanded="false" aria-controls="breakdownContent">
           <span>Calculation Breakdown (NDS 2018 &sect;3.7 &amp; &sect;3.9)</span>
-          <span class="arrow">&#9660;</span>
+          <span class="arrow" aria-hidden="true">&#9660;</span>
         </button>
         <div class="breakdown-content" id="breakdownContent"></div>
-        
+
+        <div class="print-only" id="printMeta"></div>
+
         <div class="action-bar">
-          <button class="btn btn-action" id="btnCopySummary">📋 Copy Summary</button>
-          <button class="btn btn-action" onclick="window.print()">🖨️ Print PDF</button>
-          <button class="btn btn-action" id="btnShare">🔗 Share</button>
-          <button class="btn btn-action" id="btnEmbed">💻 Embed Code</button>
+          <button type="button" class="btn btn-action" id="btnCopySummary">📋 Copy Summary</button>
+          <button type="button" class="btn btn-action" onclick="window.print()">🖨️ Print PDF</button>
+          <button type="button" class="btn btn-action" id="btnShare">🔗 Copy Link</button>
+          <button type="button" class="btn btn-action" id="btnEmbed">💻 Embed Code</button>
         </div>
 
       </div>
     </div>
 
     <div class="disclaimer">
-      <strong>Disclaimer:</strong> This tool provides estimates per IRC 2021 prescriptive provisions and NDS 2018 ASD for dimensional lumber studs. It includes checks for pure axial compression (NDS &sect;3.7) and combined out-of-plane wind bending + axial compression (NDS &sect;3.9). Bending calculations assume the compression edge is continuously supported by sheathing ($C_L=1.0$). Verification of lateral/shear forces, connections, and system deflection is required. <strong>Oasis Engineering LLC assumes no liability for use of this tool.</strong> Verify all designs with a licensed structural engineer.
+      <strong>Disclaimer:</strong> This tool provides estimates per IRC 2021 prescriptive provisions and NDS 2018 ASD for dimensional lumber studs. It checks pure axial compression (NDS &sect;3.7) and, when a wind pressure is entered, combined out-of-plane bending + axial compression (NDS &sect;3.9, Eq. 3.9-3) as a separate load case at C<sub>D</sub> = 1.6. Bending capacity assumes the compression edge is continuously supported by sheathing (C<sub>L</sub> = 1.0) and repetitive-member framing (C<sub>r</sub> = 1.15); dry service, untreated, normal temperature (C<sub>M</sub> = C<sub>t</sub> = C<sub>i</sub> = 1.0). Shear, deflection, connections, and in-plane lateral forces must be verified separately. <strong>Oasis Engineering LLC assumes no liability for use of this tool.</strong> Verify all designs with a licensed structural engineer.
     </div>
   </div>
 </main>
-<section style="max-width: 1080px; margin: 40px auto 0; padding: 40px 24px; background: var(--accent-light); border: 1px solid rgba(26,92,76,0.15); border-radius: var(--radius); text-align: center; font-family: var(--sans);">
-  
-  <h2 style="font-size: 1.5rem; color: var(--accent); margin-bottom: 12px; font-weight: 700; letter-spacing: -0.01em;">
-    Need a PE Stamp for Your Wall Removal?
-  </h2>
-  
-  <p style="font-size: 0.95rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto 24px; line-height: 1.6;">
-    This calculator is a great planning tool, but most building departments require official documentation. Oasis Engineering provides fast, reliable structural engineering services to get your permits approved and keep your project moving.
-  </p>
-  
-  <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 32px;">
-    <span style="background: white; padding: 8px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">📝 PE Stamped Letters</span>
-    <span style="background: white; padding: 8px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">🏗️ Wall Removal Reports</span>
-    <span style="background: white; padding: 8px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">🤝 Structural Consulting</span>
-    <span style="background: white; padding: 8px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">✅ Engineer Certification</span>
-  </div>
 
-  <a href="https://oasisengineering.com/contact" style="display: inline-block; background: var(--accent); color: white; padding: 14px 32px; border-radius: var(--radius-sm); font-weight: 700; text-decoration: none; font-size: 0.95rem; transition: background 0.2s, transform 0.2s; box-shadow: var(--shadow);">
-    Request an Engineering Quote
-  </a>
-  
+<section class="cta">
+  <h2>Need a PE Stamp for Your Wall Removal?</h2>
+  <p>
+    This calculator is a planning tool, but most building departments require official documentation. Oasis Engineering provides fast, reliable structural engineering services to get your permits approved and keep your project moving.
+  </p>
+  <div class="cta-chips">
+    <span>📝 PE Stamped Letters</span>
+    <span>🏗️ Wall Removal Reports</span>
+    <span>🤝 Structural Consulting</span>
+    <span>✅ Engineer Certification</span>
+  </div>
+  <a class="cta-btn" href="https://oasisengineering.com/contact">Request an Engineering Quote</a>
 </section>
+
 <footer class="site-footer">
   <div class="footer-feedback">
-    Was this tool helpful? 
-    <button class="feedback-btn" id="feedYes">👍 Yes</button>
-    <button class="feedback-btn" id="feedNo">👎 Needs improvement</button>
+    Was this tool helpful?
+    <button type="button" class="feedback-btn" id="feedYes">👍 Yes</button>
+    <button type="button" class="feedback-btn" id="feedNo">👎 Needs improvement</button>
   </div>
   <div class="footer-credits">
-    Developed by <a href="https://www.oasisengineering.com" target="_blank">Oasis Engineering</a> &mdash; Structural Engineering Services
+    Developed by <a href="https://www.oasisengineering.com" target="_blank" rel="noopener">Oasis Engineering</a> &mdash; Structural Engineering Services
   </div>
 </footer>
 
-<div class="toast" id="toastMsg">Action successful!</div>
+<div class="toast" id="toastMsg" role="status" aria-live="polite">Action successful!</div>
 
 <script>
+'use strict';
 /* ═══════════════════════════════════════════════════════════
-    NDS 2018 SUPPLEMENT DATA — v3.2 (Export & Analytics Hooks)
-    ═══════════════════════════════════════════════════════════
-*/
+    v4.0 — Dual load-case engine (NDS 2018 §3.7 + §3.9)
+    Design values per NDS 2018 Supplement Tables 4A / 4B
+    (Southern Pine = post-2013 SPIB values)
+    ═══════════════════════════════════════════════════════════ */
 
+/* ── CALC CORE START ── */
 const SPECIES = {
   DFL2: {
     name: "Douglas Fir-Larch No. 2",
@@ -942,8 +946,9 @@ const SPECIES = {
   },
   SP2: {
     name: "Southern Pine No. 2",
-    Fc_bySize: { "2x4": 1650, "2x6": 1600, "2x8": 1550, "2x10": 1500 },
-    Fb_bySize: { "2x4": 1500, "2x6": 1250, "2x8": 1200, "2x10": 1050 },
+    // NDS 2018 Table 4B (SPIB 2013 values) — size factor already included
+    Fc_bySize: { "2x4": 1450, "2x6": 1400, "2x8": 1350, "2x10": 1300 },
+    Fb_bySize: { "2x4": 1100, "2x6": 1000, "2x8": 925,  "2x10": 800  },
     Emin: 510000, cfType: "included"
   },
   HF2: {
@@ -952,10 +957,11 @@ const SPECIES = {
   },
   SPF2: {
     name: "Spruce-Pine-Fir No. 2",
-    Fc_base: 1150, Fb_base: 875, Emin: 440000, cfType: "standard"
+    Fc_base: 1150, Fb_base: 875, Emin: 510000, cfType: "standard"
   }
 };
 
+// NDS Table 4A size factors (2" thick dimension lumber)
 const CF_FC = { "2x4": 1.15, "2x6": 1.10, "2x8": 1.05, "2x10": 1.00 };
 const CF_FB = { "2x4": 1.50, "2x6": 1.30, "2x8": 1.20, "2x10": 1.10 };
 
@@ -967,442 +973,500 @@ const STUDS = {
 };
 
 const SIZES = ["2x4", "2x6", "2x8", "2x10"];
+const KCE = 0.822;        // NDS 3.7.1.5, visually graded lumber
+const C_COL = 0.8;        // NDS column parameter c, sawn lumber
+const CD_WIND = 1.6;      // NDS Table 2.3.2, wind load duration
+const CR_REP = 1.15;      // Repetitive member factor (≥3 studs @ ≤24" o.c.)
 
-// Current Recommended Data (For Export)
-let currentExportData = null;
-
-// ── Master Stud Calculation ──
-function calcStud(size, species, heightFt, CD, isBraced, loadPerStud, wind_psf, spacing_in) {
-  const sp = SPECIES[species];
-  const stud = STUDS[size];
-
-  const Ke = 1.0;
-  const le = Ke * heightFt * 12;
-  const leastDim = isBraced ? stud.d : stud.b;
-  const slenderness = le / leastDim;
-  const slendernessOK = slenderness <= 50;
-
-  let Fc_base = sp.cfType === "included" ? sp.Fc_bySize[size] : sp.Fc_base;
-  const CF_c = (sp.cfType === "standard") ? CF_FC[size] : 1.0;
-  const FcStar = Fc_base * CD * CF_c;
-  
-  const EminPrime = sp.Emin * 1.0; 
-  const KcE = 0.822;
-  const c = 0.8;
-
-  const FcE = KcE * EminPrime / Math.pow(slenderness, 2);
-  const ratio = FcE / FcStar;
-  const term1 = (1 + ratio) / (2 * c);
-  const disc = Math.max(term1 * term1 - ratio / c, 0);
-  
-  const Cp = Math.max(Math.min(term1 - Math.sqrt(disc), 1.0), 0);
-
-  let FcPrime = 0;
-  if (slendernessOK) FcPrime = FcStar * Cp;
-
-  let fc = loadPerStud / stud.A;
-  let axial_DCR = FcPrime > 0 ? fc / FcPrime : Infinity;
-
-  let fb = 0;
-  let FbPrime = 0;
-  let combined_DCR = 0;
-  let FcE1 = 0; 
-  let Fb_base = 0;
-  let CF_b = 1.0;
-  let Cr = 1.15; 
-  let M_in_lbs = 0;
-
-  if (wind_psf > 0) {
-    Fb_base = sp.cfType === "included" ? sp.Fb_bySize[size] : sp.Fb_base;
-    CF_b = sp.cfType === "standard" ? CF_FB[size] : 1.0;
-    FbPrime = Fb_base * CD * CF_b * Cr;
-
-    const wind_plf_stud = wind_psf * (spacing_in / 12);
-    M_in_lbs = (wind_plf_stud * Math.pow(heightFt, 2) / 8) * 12;
-    fb = M_in_lbs / stud.S;
-
-    const le1 = heightFt * 12; 
-    const slenderness_strong = le1 / stud.d;
-    FcE1 = KcE * EminPrime / Math.pow(slenderness_strong, 2);
-
-    if (fc >= FcE1 || !slendernessOK) {
-      combined_DCR = Infinity; 
-    } else {
-      const den = 1 - (fc / FcE1);
-      if (den <= 0) {
-        combined_DCR = Infinity;
-      } else {
-        const axial_term = Math.pow(fc / FcPrime, 2);
-        const bending_term = fb / (FbPrime * den);
-        combined_DCR = Math.max(axial_term + bending_term, 0);
-      }
-    }
-  }
-
-  const final_utilization = wind_psf > 0 ? combined_DCR : axial_DCR;
-
-  return {
-    size, species: sp.name, isBraced,
-    Fc_base, CF_c, CD, FcStar, EminPrime, Ke, le, leastDim, slenderness, slendernessOK, KcE, c, FcE, Cp, FcPrime, fc, axial_DCR,
-    wind_psf, Fb_base, CF_b, Cr, FbPrime, M_in_lbs, S: stud.S, fb, FcE1, combined_DCR,
-    A: stud.A, b: stud.b, d: stud.d,
-    utilization: final_utilization,
-    passes: (final_utilization <= 1.0) && slendernessOK
-  };
+// NDS 3.7.1: column stability factor Cp and Euler stress FcE
+function columnStability(FcStar, Emin, slenderness) {
+  const FcE = KCE * Emin / (slenderness * slenderness);
+  const r = FcE / FcStar;
+  const t = (1 + r) / (2 * C_COL);
+  const disc = Math.max(t * t - r / C_COL, 0);
+  const Cp = Math.max(Math.min(t - Math.sqrt(disc), 1.0), 0);
+  return { FcE: FcE, Cp: Cp };
 }
 
-// ── UI Methods ──
+/*
+ * Checks one stud size under two ASD load cases:
+ *   Case A — Gravity axial only (NDS §3.7), CD = user-selected
+ *   Case B — Gravity axial + out-of-plane wind bending
+ *             (NDS §3.9 Eq. 3.9-3), CD = 1.6 (recomputes Cp at the
+ *             wind-case Fc*, since Cp depends on FcE/Fc*)
+ * Governing utilization = max of the two.
+ */
+function calcStud(size, speciesKey, heightFt, CDgravity, isBraced, loadPerStud, wind_psf, spacing_in) {
+  const sp = SPECIES[speciesKey];
+  const stud = STUDS[size];
+
+  const le = heightFt * 12;                       // Ke = 1.0 (pinned-pinned)
+  const bucklingDim = isBraced ? stud.d : stud.b; // sheathing braces weak axis
+  const slenderness = le / bucklingDim;
+  const slendernessOK = slenderness <= 50;        // NDS 3.7.1.4
+  const fc = loadPerStud / stud.A;
+
+  const Fc_base = sp.cfType === "included" ? sp.Fc_bySize[size] : sp.Fc_base;
+  const CF_c = sp.cfType === "standard" ? CF_FC[size] : 1.0;
+
+  // ── Case A: gravity axial (NDS 3.7) ──
+  const FcStarA = Fc_base * CDgravity * CF_c;
+  const stabA = columnStability(FcStarA, sp.Emin, slenderness);
+  const FcPrimeA = slendernessOK ? FcStarA * stabA.Cp : 0;
+  const axialDCR = !slendernessOK ? Infinity : (fc === 0 ? 0 : fc / FcPrimeA);
+
+  const out = {
+    size: size, speciesName: sp.name, isBraced: isBraced,
+    A: stud.A, b: stud.b, d: stud.d, S: stud.S, Emin: sp.Emin,
+    le: le, bucklingDim: bucklingDim, slenderness: slenderness, slendernessOK: slendernessOK,
+    fc: fc, Fc_base: Fc_base, CF_c: CF_c, CDgravity: CDgravity,
+    FcStarA: FcStarA, FcEA: stabA.FcE, CpA: stabA.Cp, FcPrimeA: FcPrimeA, axialDCR: axialDCR,
+    wind_psf: wind_psf, hasWind: wind_psf > 0
+  };
+
+  // ── Case B: gravity + wind, combined (NDS 3.9, CD = 1.6) ──
+  if (out.hasWind) {
+    const FcStarB = Fc_base * CD_WIND * CF_c;
+    const stabB = columnStability(FcStarB, sp.Emin, slenderness);
+    const FcPrimeB = slendernessOK ? FcStarB * stabB.Cp : 0;
+
+    const Fb_base = sp.cfType === "included" ? sp.Fb_bySize[size] : sp.Fb_base;
+    const CF_b = sp.cfType === "standard" ? CF_FB[size] : 1.0;
+    const FbPrime = Fb_base * CD_WIND * CF_b * CR_REP; // CL = 1.0 (sheathed edge)
+
+    const w_stud = wind_psf * (spacing_in / 12);       // plf on one stud
+    const M = (w_stud * heightFt * heightFt / 8) * 12; // lb-in, simple span
+    const fb = M / stud.S;
+
+    const slStrong = le / stud.d;                      // bending about strong axis
+    const FcE1 = KCE * sp.Emin / (slStrong * slStrong);
+
+    let combinedDCR;
+    if (!slendernessOK || FcPrimeB <= 0 || fc >= FcE1) {
+      combinedDCR = Infinity;                          // P-delta term invalid
+    } else {
+      combinedDCR = Math.pow(fc / FcPrimeB, 2) + fb / (FbPrime * (1 - fc / FcE1));
+    }
+
+    out.FcStarB = FcStarB; out.FcEB = stabB.FcE; out.CpB = stabB.Cp; out.FcPrimeB = FcPrimeB;
+    out.Fb_base = Fb_base; out.CF_b = CF_b; out.FbPrime = FbPrime;
+    out.M = M; out.fb = fb; out.FcE1 = FcE1; out.combinedDCR = combinedDCR;
+  }
+
+  out.utilization = out.hasWind ? Math.max(out.axialDCR, out.combinedDCR) : out.axialDCR;
+  out.governing = (out.hasWind && out.combinedDCR >= out.axialDCR) ? "B" : "A";
+  out.passes = slendernessOK && out.utilization <= 1.0;
+  return out;
+}
+/* ── CALC CORE END ── */
+</script>
+
+<script>
+'use strict';
+/* ═══════════ UI, state, sharing, analytics ═══════════ */
+
+let currentExportData = null;
+
+const $ = function(id) { return document.getElementById(id); };
+const fmtDCR = function(v) { return v === Infinity ? '>9.99' : v.toFixed(2); };
+const fmtDCR3 = function(v) { return v === Infinity ? '>9.99' : v.toFixed(3); };
+const fmtPct = function(v) { return v === Infinity ? '>999%' : (v * 100).toFixed(0) + '%'; };
+
 function showToast(msg) {
-  const t = document.getElementById('toastMsg');
+  const t = $('toastMsg');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(function() { t.classList.remove('show'); }, 3000);
 }
 
 function showError(msg) {
-  document.getElementById('errorText').textContent = msg;
-  document.getElementById('errorMsg').classList.add('visible');
+  $('errorText').textContent = msg;
+  $('errorMsg').classList.add('visible');
 }
-function hideError() {
-  document.getElementById('errorMsg').classList.remove('visible');
-}
+function hideError() { $('errorMsg').classList.remove('visible'); }
 
-// ── Real-Time Usage Counter ──
-const counterNamespace = "oasisengineering";
-const counterName = "wallcalc";
+/* ── Usage counter (real counts only; badge hidden if API unreachable) ── */
+const COUNTER_URL = "https://api.counterapi.dev/v1/oasisengineering/wallcalc";
 
-// 1. Fetch the live count as soon as the page loads
-fetch(`https://api.counterapi.dev/v1/${counterNamespace}/${counterName}`)
-  .then(response => response.json())
-  .then(data => {
-    // If the counter doesn't exist yet, it will return 0
-    let count = data.count || 0;
-    // Let's add a "base" number so it doesn't start at 0 and look empty
-    // You can change 1200 to whatever you want your starting "seed" to be!
-    let displayCount = count + 1200; 
-    document.getElementById('usageCount').textContent = displayCount.toLocaleString();
-  })
-  .catch(err => console.error("Counter fetch error:", err));
-
-// 2. Increment the count whenever someone clicks "Calculate"
-function incrementUsageCounter() {
-  fetch(`https://api.counterapi.dev/v1/${counterNamespace}/${counterName}/up`)
-    .then(response => response.json())
-    .then(data => {
-      let displayCount = data.count + 1200;
-      document.getElementById('usageCount').textContent = displayCount.toLocaleString();
+function loadUsageCount() {
+  fetch(COUNTER_URL)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (typeof data.count === "number") {
+        $('usageCount').textContent = data.count.toLocaleString();
+        $('usageBadge').classList.add('live');
+      }
     })
-    .catch(err => console.error("Counter increment error:", err));
+    .catch(function() { $('usageBadge').classList.remove('live'); });
 }
-// Initialize real-time count
-/*
-fetch('/api/calc-count')
-  .then(r => r.json())
-  .then(data => {
-    localCalcCount = data.count;
-    document.getElementById('usageCount').textContent = localCalcCount.toLocaleString();
-  });
-*/
 
-function calculate() {
+function incrementUsageCounter() {
+  fetch(COUNTER_URL + "/up")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (typeof data.count === "number") {
+        $('usageCount').textContent = data.count.toLocaleString();
+        $('usageBadge').classList.add('live');
+      }
+    })
+    .catch(function() { /* non-blocking */ });
+}
+
+/* ── URL state: every calculation gets a shareable deep link ── */
+function readInputs() {
+  return {
+    height: parseFloat($('wallHeight').value),
+    load: parseFloat($('supportedLoad').value),
+    wind: parseFloat($('windLoad').value),
+    spacing: parseInt($('studSpacing').value, 10),
+    species: $('woodSpecies').value,
+    CD: parseFloat($('loadDuration').value),
+    isBraced: $('isBraced').value === 'yes'
+  };
+}
+
+function syncURL(inp) {
+  const q = new URLSearchParams();
+  q.set('h', inp.height); q.set('p', inp.load); q.set('w', inp.wind);
+  q.set('s', inp.spacing); q.set('sp', inp.species); q.set('cd', inp.CD);
+  q.set('br', inp.isBraced ? '1' : '0');
+  history.replaceState(null, '', location.pathname + '?' + q.toString());
+}
+
+function applyParamsFromURL() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('h')) return false;
+  const setVal = function(id, v) { if (v !== null && v !== '') $(id).value = v; };
+  const setSel = function(id, v) {
+    const el = $(id);
+    if (v === null) return;
+    for (let i = 0; i < el.options.length; i++) {
+      if (el.options[i].value === v) { el.value = v; return; }
+    }
+  };
+  setVal('wallHeight', q.get('h'));
+  setVal('supportedLoad', q.get('p'));
+  setVal('windLoad', q.get('w'));
+  setSel('studSpacing', q.get('s'));
+  setSel('woodSpecies', q.get('sp'));
+  setSel('loadDuration', q.get('cd'));
+  setSel('isBraced', q.get('br') === '0' ? 'no' : 'yes');
+  return true;
+}
+
+/* ── Main calculate ── */
+function calculate(opts) {
+  opts = opts || {};
   hideError();
 
-  const h = parseFloat(document.getElementById('wallHeight').value);
-  const load = parseFloat(document.getElementById('supportedLoad').value);
-  const wind = parseFloat(document.getElementById('windLoad').value);
-  const spacing = parseInt(document.getElementById('studSpacing').value);
-  const species = document.getElementById('woodSpecies').value;
-  const CD = parseFloat(document.getElementById('loadDuration').value);
-  const isBraced = document.getElementById('isBraced').value === 'yes';
+  const inp = readInputs();
 
-  if (isNaN(h) || h <= 0) { showError("Enter a positive wall height."); return; }
-  if (isNaN(load) || load < 0) { showError("Enter a non-negative axial load."); return; }
-  if (isNaN(wind) || wind < 0) { showError("Enter a non-negative wind load."); return; }
-  if (load === 0 && wind === 0) { showError("Axial and wind loads are both zero — nothing to check."); return; }
+  if (isNaN(inp.height) || inp.height <= 0) { showError("Enter a positive wall height."); return; }
+  if (inp.height > 20) { showError("Heights above 20 ft are outside the scope of this tool. Contact us for engineered tall-wall design."); return; }
+  if (isNaN(inp.load) || inp.load < 0) { showError("Enter a non-negative axial load."); return; }
+  if (isNaN(inp.wind) || inp.wind < 0) { showError("Enter a non-negative wind load."); return; }
+  if (inp.load === 0 && inp.wind === 0) { showError("Axial and wind loads are both zero — nothing to check."); return; }
 
-  incrementUsageCounter();
-
-  // Google Analytics Hook
-  if (typeof gtag !== "undefined") {
-    gtag('event', 'calculator_use', {
-      'event_category': 'engineering_tool',
-      'event_label': 'stud_wall_calculator'
-    });
+  if (opts.countUsage !== false) {
+    incrementUsageCounter();
+    if (typeof gtag !== "undefined") {
+      gtag('event', 'calculator_use', {
+        'event_category': 'engineering_tool',
+        'event_label': 'stud_wall_calculator'
+      });
+    }
   }
 
-  const loadPerStud = load * (spacing / 12);
+  const loadPerStud = inp.load * (inp.spacing / 12);
 
-  let results = [];
+  const results = [];
   let recommended = null;
-
-  for (const size of SIZES) {
-    const r = calcStud(size, species, h, CD, isBraced, loadPerStud, wind, spacing);
+  for (let i = 0; i < SIZES.length; i++) {
+    const r = calcStud(SIZES[i], inp.species, inp.height, inp.CD, inp.isBraced, loadPerStud, inp.wind, inp.spacing);
     results.push(r);
     if (!recommended && r.passes) recommended = r;
   }
-
   if (!recommended) recommended = results[results.length - 1];
 
-  const inp = { height: h, load, wind, spacing, species, CD, isBraced };
-  currentExportData = { inp, rec: recommended };
-  
+  currentExportData = { inp: inp, rec: recommended };
+  syncURL(inp);
   renderResults(inp, recommended, results);
 }
 
+/* ── Rendering ── */
 function renderResults(inp, rec, all) {
-  document.getElementById('emptyState').style.display = 'none';
+  $('emptyState').style.display = 'none';
 
-  const panel = document.getElementById('resultsPanel');
+  const panel = $('resultsPanel');
   panel.classList.remove('visible');
   void panel.offsetWidth;
   panel.classList.add('visible');
 
   const ok = rec.passes;
-
-  document.getElementById('verdictBanner').className = 'verdict ' + (ok ? 'pass' : 'fail');
-  document.getElementById('verdictIcon').textContent = ok ? '✓' : '✗';
-
   const spShort = SPECIES[inp.species].name.split(' No.')[0];
 
-  if (ok && inp.wind === 0) {
-    document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Adequate`;
-    document.getElementById('verdictSubtitle').textContent = `Passes NDS §3.7 axial column constraints for ${inp.load} plf.`;
-  } else if (ok && inp.wind > 0) {
-    document.getElementById('verdictTitle').textContent = `${rec.size} ${spShort} — Adequate`;
-    document.getElementById('verdictSubtitle').textContent = `Passes NDS §3.9 combined bending and axial constraints.`;
+  $('verdictBanner').className = 'verdict ' + (ok ? 'pass' : 'fail');
+  $('verdictIcon').textContent = ok ? '✓' : '✗';
+
+  if (ok) {
+    $('verdictTitle').textContent = rec.size + ' ' + spShort + ' — Adequate';
+    if (!rec.hasWind) {
+      $('verdictSubtitle').textContent = 'Passes the NDS §3.7 axial check at ' + inp.load + ' plf.';
+    } else if (rec.governing === 'B') {
+      $('verdictSubtitle').textContent = 'Governing case: combined wind bending + axial (NDS §3.9, CD = 1.6).';
+    } else {
+      $('verdictSubtitle').textContent = 'Governing case: gravity axial (NDS §3.7); wind case also passes.';
+    }
   } else {
-    document.getElementById('verdictTitle').textContent = `${rec.size} — Requirements Not Met`;
-    document.getElementById('verdictSubtitle').textContent = `No standard dimensional stud size passes at these parameters.`;
+    $('verdictTitle').textContent = rec.size + ' — Requirements Not Met';
+    $('verdictSubtitle').textContent = 'No standard stud size (2x4–2x10) passes at these parameters.';
   }
 
-  document.getElementById('mRecommended').textContent = rec.size;
-  
-  const dcrLabel = inp.wind > 0 ? "Interaction D/C" : "Axial D/C";
-  document.getElementById('mInteractionLabel').textContent = dcrLabel;
-  document.getElementById('mInteraction').textContent = rec.utilization === Infinity ? '>9.99' : rec.utilization.toFixed(2);
-  
-  document.getElementById('mStatus').textContent = ok ? 'PASS' : 'FAIL';
-  document.getElementById('mStatus').style.color = ok ? 'var(--pass)' : 'var(--fail)';
+  $('mRecommended').textContent = rec.size;
+  $('mInteractionLabel').textContent = rec.hasWind ? 'Governing D/C' : 'Axial D/C';
+  $('mInteraction').textContent = fmtDCR(rec.utilization);
+  $('mStatus').textContent = ok ? 'PASS' : 'FAIL';
+  $('mStatus').style.color = ok ? 'var(--pass)' : 'var(--fail)';
 
-  const utilPctDisplay = rec.utilization === Infinity ? '>999%' : (rec.utilization * 100).toFixed(1) + '%';
   const utilPctValue = rec.utilization === Infinity ? 100 : rec.utilization * 100;
-  
   const cls = rec.utilization <= 0.75 ? 'util-low' : (rec.utilization <= 1.0 ? 'util-med' : 'util-high');
-  document.getElementById('utilSection').className = 'utilization-section ' + cls;
-  document.getElementById('utilPct').textContent = utilPctDisplay;
+  $('utilSection').className = 'utilization-section ' + cls;
+  $('utilPct').textContent = rec.utilization === Infinity ? '>999%' : utilPctValue.toFixed(1) + '%';
 
-  const bar = document.getElementById('utilBar');
+  const bar = $('utilBar');
   bar.style.transition = 'none';
   bar.style.width = '0%';
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
       bar.style.transition = 'width 600ms cubic-bezier(0.4,0,0.2,1)';
       bar.style.width = Math.min(utilPctValue, 100) + '%';
     });
   });
 
-  const el = document.getElementById('sizeRows');
+  const el = $('sizeRows');
   el.innerHTML = '';
-
-  all.forEach(r => {
+  all.forEach(function(r) {
     const isRec = (r.size === rec.size) && r.passes;
     const pctVal = r.utilization === Infinity ? 100 : r.utilization * 100;
-    const pctText = r.utilization === Infinity ? '>999%' : (r.utilization * 100).toFixed(0) + '%';
-
     let suffix = '';
     if (!r.slendernessOK) suffix = '<span class="rec-badge" style="background:#fde8e6;color:#b8372b;">slender</span>';
     else if (isRec) suffix = '<span class="rec-badge">min</span>';
 
-    el.innerHTML += `
-      <div class="size-row ${r.passes ? 'pass-row' : 'fail-row'} ${isRec ? 'recommended' : ''}">
-        <div class="size-name">${r.size}${suffix}</div>
-        <div class="size-bar-track">
-          <div class="size-bar-fill" data-pct="${Math.min(pctVal, 100)}" style="width:0%"></div>
-        </div>
-        <div class="size-pct">${pctText}</div>
-      </div>`;
+    el.innerHTML += '<div class="size-row ' + (r.passes ? 'pass-row' : 'fail-row') + (isRec ? ' recommended' : '') + '">'
+      + '<div class="size-name">' + r.size + suffix + '</div>'
+      + '<div class="size-bar-track"><div class="size-bar-fill" data-pct="' + Math.min(pctVal, 100) + '" style="width:0%"></div></div>'
+      + '<div class="size-pct">' + fmtPct(r.utilization) + '</div>'
+      + '</div>';
   });
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.querySelectorAll('.size-bar-fill').forEach(b => {
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      el.querySelectorAll('.size-bar-fill').forEach(function(b) {
         b.style.transition = 'width 800ms cubic-bezier(0.4,0,0.2,1)';
         b.style.width = b.dataset.pct + '%';
       });
     });
   });
 
+  /* Alerts */
   let alerts = '';
   if (inp.height > 10) {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Heights above 10 ft exceed typical IRC prescriptive wall limits. Engineered review may be required by the AHJ.</div>`;
+    alerts += '<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Heights above 10 ft exceed typical IRC prescriptive wall limits (R602.3.1). Engineered review may be required by the AHJ.</div>';
   }
-  if (inp.CD > 1.25 && inp.wind === 0) {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Applying a Load Duration factor (C<sub>D</sub>) > 1.25 to a wall with 0 wind load suggests lateral force application to a gravity-only path. Verify load assumptions.</div>`;
+  if (rec.hasWind) {
+    alerts += '<div class="alert alert-info"><span class="alert-icon">&#8505;</span>Two load cases checked: gravity axial at C<sub>D</sub> = ' + inp.CD + ' and combined bending + axial at C<sub>D</sub> = 1.6 (NDS Table 2.3.2). Wind input is assumed to be an ASD-level pressure.</div>';
   }
-  if (inp.wind > 0 && inp.CD <= 1.0) {
-    alerts += `<div class="alert alert-info"><span class="alert-icon">&#8505;</span>For wind combinations, NDS allows C<sub>D</sub> = 1.6. Consider updating the Load Duration setting.</div>`;
+  if (rec.hasWind && !rec.isBraced) {
+    alerts += '<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Bending capacity assumes C<sub>L</sub> = 1.0 (compression edge braced by sheathing), which conflicts with the "Unbraced" selection. The bending check may be unconservative — verify C<sub>L</sub> per NDS 3.3.3.</div>';
   }
   if (!rec.slendernessOK) {
-    alerts += `<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Calculated slenderness l<sub>e</sub>/d = ${rec.slenderness.toFixed(1)}, exceeding the NDS limit of 50. Provide continuous weak-axis bracing.</div>`;
+    alerts += '<div class="alert alert-warn"><span class="alert-icon">&#9888;</span>Calculated slenderness l<sub>e</sub>/d = ' + rec.slenderness.toFixed(1) + ', exceeding the NDS limit of 50. Provide continuous weak-axis bracing.</div>';
   }
+  $('alertsContainer').innerHTML = alerts;
 
-  document.getElementById('alertsContainer').innerHTML = alerts;
+  $('printMeta').textContent = 'Generated ' + new Date().toLocaleDateString() + ' — Oasis Engineering Load-Bearing Wall Calculator v4.0 — oasisengineering.com';
+
   renderBreakdown(rec, inp);
 }
 
+function line(label, value) {
+  return '<div class="calc-line"><span class="calc-var">' + label + '</span><span class="calc-val">' + value + '</span></div>';
+}
+
 function renderBreakdown(r, inp) {
-  const CpText = r.slendernessOK ? r.Cp.toFixed(4) : '<span style="color:var(--fail)">N/A (>50)</span>';
-  const FcPrimeText = r.slendernessOK ? r.FcPrime.toFixed(1) + ' psi' : '<span style="color:var(--fail)">0 psi</span>';
-  
-  let html = `
-    <div class="calc-section-title">1. Material Properties</div>
-    <div class="calc-line"><span class="calc-var">Species / Grade</span><span class="calc-val">${r.species}</span></div>
-    <div class="calc-line"><span class="calc-var">Base Compression (F<sub>c</sub>)</span><span class="calc-val">${r.Fc_base.toLocaleString()} psi</span></div>
-    ${inp.wind > 0 ? `<div class="calc-line"><span class="calc-var">Base Bending (F<sub>b</sub>)</span><span class="calc-val">${r.Fb_base.toLocaleString()} psi</span></div>` : ''}
-    <div class="calc-line"><span class="calc-var">Base E<sub>min</sub></span><span class="calc-val">${(r.EminPrime).toLocaleString()} psi</span></div>
+  const CpAText = r.slendernessOK ? r.CpA.toFixed(4) : '<span style="color:var(--fail)">N/A (&gt;50)</span>';
+  const FcPrimeAText = r.slendernessOK ? r.FcPrimeA.toFixed(1) + ' psi' : '<span style="color:var(--fail)">0 psi</span>';
 
-    <div class="calc-section-title">2. Section Properties — ${r.size}</div>
-    <div class="calc-line"><span class="calc-var">Area (A)</span><span class="calc-val">${r.A} in&sup2;</span></div>
-    ${inp.wind > 0 ? `<div class="calc-line"><span class="calc-var">Section Modulus (S)</span><span class="calc-val">${r.S.toFixed(4)} in&sup3;</span></div>` : ''}
-    <div class="calc-line"><span class="calc-var">Controlling Slenderness Dim.</span><span class="calc-val">${r.leastDim}" ${r.isBraced ? '(Strong)' : '(Weak)'}</span></div>
+  let html = ''
+    + '<div class="calc-section-title">Design Inputs</div>'
+    + line('Wall height', inp.height + ' ft')
+    + line('Axial load', inp.load + ' plf &rarr; ' + (inp.load * inp.spacing / 12).toFixed(0) + ' lb/stud')
+    + line('Wind pressure (ASD)', inp.wind + ' psf')
+    + line('Stud spacing', inp.spacing + '" o.c.')
+    + line('Weak-axis bracing', r.isBraced ? 'Sheathed' : 'Unbraced')
+    + line('Gravity C<sub>D</sub>', inp.CD.toFixed(2))
 
-    <div class="calc-section-title">3. Axial Stability (NDS 3.7)</div>
-    <div class="calc-line"><span class="calc-var">F<sub>c</sub>* = F<sub>c</sub> × C<sub>D</sub> × C<sub>F</sub></span><span class="calc-val">${r.FcStar.toFixed(0)} psi</span></div>
-    <div class="calc-line"><span class="calc-var">Slenderness l<sub>e</sub> / d</span><span class="calc-val">${r.slenderness.toFixed(2)}${!r.slendernessOK ? ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>' : ' &le; 50 &#10003;'}</span></div>
-    <div class="calc-line"><span class="calc-var">Euler Buckling F<sub>cE</sub></span><span class="calc-val">${r.FcE.toFixed(1)} psi</span></div>
-    <div class="calc-line"><span class="calc-var">Stability Factor C<sub>p</sub></span><span class="calc-val"><strong>${CpText}</strong></span></div>
-    <div class="calc-line"><span class="calc-var"><strong>Adjusted Capacity F'<sub>c</sub></strong></span><span class="calc-val"><strong>${FcPrimeText}</strong></span></div>
-    <div class="calc-line"><span class="calc-var">Actual Stress f<sub>c</sub> = P / A</span><span class="calc-val">${r.fc.toFixed(1)} psi</span></div>
-  `;
+    + '<div class="calc-section-title">Material Properties — ' + r.speciesName + '</div>'
+    + line('Base compression F<sub>c</sub>', r.Fc_base.toLocaleString() + ' psi')
+    + (r.hasWind ? line('Base bending F<sub>b</sub>', r.Fb_base.toLocaleString() + ' psi') : '')
+    + line('E<sub>min</sub>', r.Emin.toLocaleString() + ' psi')
+    + line('Size factor C<sub>F</sub> (compression)', r.CF_c === 1.0 && r.speciesName.indexOf('Southern') === 0 ? 'Included in F<sub>c</sub>' : r.CF_c.toFixed(2))
+    + '<div class="calc-note">Assumes dry service, untreated, normal temperature (C<sub>M</sub> = C<sub>t</sub> = C<sub>i</sub> = 1.0). Southern Pine values per post-2013 SPIB rules (NDS 2018 Table 4B).</div>'
 
-  if (inp.wind > 0) {
-    html += `
-      <div class="calc-section-title">4. Bending Stability (NDS 3.3.3)</div>
-      <div class="calc-line"><span class="calc-var">Assumed Bending Factors</span><span class="calc-val">C<sub>L</sub>=1.0, C<sub>r</sub>=1.15</span></div>
-      <div class="calc-line"><span class="calc-var"><strong>Adjusted Capacity F'<sub>b</sub></strong></span><span class="calc-val"><strong>${r.FbPrime.toFixed(1)} psi</strong></span></div>
-      <div class="calc-line"><span class="calc-var">Wind Moment (M)</span><span class="calc-val">${r.M_in_lbs.toFixed(0)} lb-in</span></div>
-      <div class="calc-line"><span class="calc-var">Actual Stress f<sub>b</sub> = M / S</span><span class="calc-val">${r.fb.toFixed(1)} psi</span></div>
+    + '<div class="calc-section-title">Section Properties — ' + r.size + '</div>'
+    + line('Area (A)', r.A + ' in&sup2;')
+    + (r.hasWind ? line('Section modulus (S)', r.S.toFixed(4) + ' in&sup3;') : '')
+    + line('Buckling dimension (d)', r.bucklingDim + '" ' + (r.isBraced ? '(strong axis)' : '(weak axis)'))
+    + line('Slenderness l<sub>e</sub>/d', r.slenderness.toFixed(2) + (r.slendernessOK ? ' &le; 50 &#10003;' : ' <span style="color:var(--fail)">&gt; 50 &#9888;</span>'))
 
-      <div class="calc-section-title">5. Combined Stress (NDS Eq 3.9-3)</div>
-      <div class="calc-line"><span class="calc-var">Strong-Axis Euler F<sub>cE1</sub></span><span class="calc-val">${r.FcE1.toFixed(1)} psi</span></div>
-      <div class="calc-line"><span class="calc-var">Axial Ratio: (f<sub>c</sub> / F'<sub>c</sub>)&sup2;</span><span class="calc-val">${Math.pow(r.fc / r.FcPrime, 2).toFixed(3)}</span></div>
-      <div class="calc-line"><span class="calc-var">Amplification: 1 - (f<sub>c</sub> / F<sub>cE1</sub>)</span><span class="calc-val">${(1 - (r.fc / r.FcE1)).toFixed(3)}</span></div>
-      <div class="calc-line"><span class="calc-var"><strong>Interaction Ratio D/C</strong></span><span class="calc-val"><strong>${r.combined_DCR === Infinity ? '>9.99' : r.combined_DCR.toFixed(3)}</strong></span></div>
-    `;
-  } else {
-    html += `
-      <div class="calc-section-title">4. Demand vs. Capacity</div>
-      <div class="calc-line"><span class="calc-var"><strong>Axial Ratio D/C</strong></span><span class="calc-val"><strong>${r.axial_DCR === Infinity ? '>9.99' : r.axial_DCR.toFixed(3)}</strong></span></div>
-    `;
+    + '<div class="calc-section-title">Case A — Gravity Axial (NDS &sect;3.7, C<sub>D</sub> = ' + inp.CD.toFixed(2) + ')</div>'
+    + line('F<sub>c</sub>* = F<sub>c</sub> &times; C<sub>D</sub> &times; C<sub>F</sub>', r.FcStarA.toFixed(0) + ' psi')
+    + line('Euler buckling F<sub>cE</sub>', r.FcEA.toFixed(1) + ' psi')
+    + line('Stability factor C<sub>p</sub>', '<strong>' + CpAText + '</strong>')
+    + line('<strong>Adjusted capacity F&prime;<sub>c</sub></strong>', '<strong>' + FcPrimeAText + '</strong>')
+    + line('Actual stress f<sub>c</sub> = P / A', r.fc.toFixed(1) + ' psi')
+    + line('<strong>Case A D/C</strong>', '<strong>' + fmtDCR3(r.axialDCR) + '</strong>');
+
+  if (r.hasWind) {
+    const CpBText = r.slendernessOK ? r.CpB.toFixed(4) : '<span style="color:var(--fail)">N/A (&gt;50)</span>';
+    html += ''
+      + '<div class="calc-section-title">Case B — Gravity + Wind (NDS &sect;3.9, C<sub>D</sub> = 1.6)</div>'
+      + line('F<sub>c</sub>* = F<sub>c</sub> &times; 1.6 &times; C<sub>F</sub>', r.FcStarB.toFixed(0) + ' psi')
+      + line('Stability factor C<sub>p</sub> (recomputed)', '<strong>' + CpBText + '</strong>')
+      + line('Adjusted capacity F&prime;<sub>c</sub>', r.FcPrimeB.toFixed(1) + ' psi')
+      + line('Bending factors', 'C<sub>L</sub> = 1.0, C<sub>r</sub> = 1.15' + (r.CF_b !== 1.0 ? ', C<sub>F</sub> = ' + r.CF_b.toFixed(2) : ''))
+      + line('Adjusted capacity F&prime;<sub>b</sub>', r.FbPrime.toFixed(1) + ' psi')
+      + line('Wind moment M = w&middot;h&sup2;/8', r.M.toFixed(0) + ' lb-in')
+      + line('Actual stress f<sub>b</sub> = M / S', r.fb.toFixed(1) + ' psi')
+      + line('Strong-axis Euler F<sub>cE1</sub>', r.FcE1.toFixed(1) + ' psi')
+      + line('Axial term (f<sub>c</sub> / F&prime;<sub>c</sub>)&sup2;', r.combinedDCR === Infinity ? '—' : Math.pow(r.fc / r.FcPrimeB, 2).toFixed(3))
+      + line('Amplification 1 &minus; (f<sub>c</sub> / F<sub>cE1</sub>)', (1 - (r.fc / r.FcE1)).toFixed(3))
+      + line('<strong>Case B D/C (Eq. 3.9-3)</strong>', '<strong>' + fmtDCR3(r.combinedDCR) + '</strong>');
   }
 
-  document.getElementById('breakdownContent').innerHTML = html;
+  html += ''
+    + '<div class="calc-section-title">Governing Result</div>'
+    + (r.hasWind ? line('Governing case', r.governing === 'B' ? 'Case B — Combined (wind)' : 'Case A — Gravity axial') : '')
+    + line('<strong>Governing D/C</strong>', '<strong>' + fmtDCR3(r.utilization) + '</strong>')
+    + line('Status', r.passes ? '<span style="color:var(--pass)">PASS</span>' : '<span style="color:var(--fail)">FAIL</span>');
+
+  $('breakdownContent').innerHTML = html;
 }
 
 function toggleBreakdown() {
-  document.getElementById('breakdownToggle').classList.toggle('open');
-  document.getElementById('breakdownContent').classList.toggle('visible');
+  const t = $('breakdownToggle');
+  t.classList.toggle('open');
+  $('breakdownContent').classList.toggle('visible');
+  t.setAttribute('aria-expanded', t.classList.contains('open') ? 'true' : 'false');
 }
 
 function resetAll() {
-  document.getElementById('wallHeight').value = '';
-  document.getElementById('supportedLoad').value = '';
-  document.getElementById('windLoad').value = '0';
-  document.getElementById('studSpacing').value = '16';
-  document.getElementById('loadDuration').value = '1.0';
-  document.getElementById('woodSpecies').value = 'DFL2';
-  document.getElementById('isBraced').value = 'yes';
+  $('wallHeight').value = '';
+  $('supportedLoad').value = '';
+  $('windLoad').value = '0';
+  $('studSpacing').value = '16';
+  $('loadDuration').value = '1.0';
+  $('woodSpecies').value = 'DFL2';
+  $('isBraced').value = 'yes';
   currentExportData = null;
 
   hideError();
-  document.getElementById('resultsPanel').classList.remove('visible');
-  document.getElementById('emptyState').style.display = '';
-  document.getElementById('breakdownToggle').classList.remove('open');
-  document.getElementById('breakdownContent').classList.remove('visible');
+  $('resultsPanel').classList.remove('visible');
+  $('emptyState').style.display = '';
+  $('breakdownToggle').classList.remove('open');
+  $('breakdownToggle').setAttribute('aria-expanded', 'false');
+  $('breakdownContent').classList.remove('visible');
+  history.replaceState(null, '', location.pathname);
+  updateRefTable();
 }
 
-// ── Export / Action Bar Functions ──
-document.getElementById('btnCopySummary').addEventListener('click', () => {
-  if(!currentExportData) return;
+/* ── Export / Action Bar ── */
+$('btnCopySummary').addEventListener('click', function() {
+  if (!currentExportData) return;
   const d = currentExportData;
-  const text = `Oasis Engineering | Stud Wall Calculation
-=======================================
-${d.rec.size} ${d.rec.species} @ ${d.inp.spacing}" o.c.
-Wall Height: ${d.inp.height} ft
-Axial Load: ${d.inp.load} plf
-Lateral Wind Load: ${d.inp.wind} psf
-
-Interaction Ratio (D/C): ${d.rec.utilization === Infinity ? '>9.99' : d.rec.utilization.toFixed(2)}
-Status: ${d.rec.passes ? 'PASS' : 'FAIL'}
----------------------------------------
-Generated by the Oasis Load-Bearing Wall Calculator
-  `;
-  navigator.clipboard.writeText(text).then(() => showToast("Summary copied to clipboard!"));
+  const r = d.rec;
+  const lines = [
+    'Oasis Engineering | Stud Wall Calculation (v4.0)',
+    '=================================================',
+    r.size + ' ' + r.speciesName + ' @ ' + d.inp.spacing + '" o.c.',
+    'Wall Height: ' + d.inp.height + ' ft',
+    'Axial Load: ' + d.inp.load + ' plf (' + (d.inp.load * d.inp.spacing / 12).toFixed(0) + ' lb/stud)',
+    'Lateral Wind Load (ASD): ' + d.inp.wind + ' psf',
+    'Weak-Axis Bracing: ' + (r.isBraced ? 'Sheathed' : 'Unbraced'),
+    '',
+    'Case A (Gravity, NDS 3.7, CD=' + d.inp.CD + ') D/C: ' + fmtDCR3(r.axialDCR)
+  ];
+  if (r.hasWind) lines.push('Case B (Combined, NDS 3.9, CD=1.6) D/C: ' + fmtDCR3(r.combinedDCR));
+  lines.push(
+    'Governing D/C: ' + fmtDCR3(r.utilization),
+    'Status: ' + (r.passes ? 'PASS' : 'FAIL'),
+    '-------------------------------------------------',
+    'Generated ' + new Date().toLocaleDateString() + ' — ' + location.href
+  );
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(function() { showToast("Summary copied to clipboard"); })
+    .catch(function() { showToast("Couldn't access clipboard — select and copy manually"); });
 });
 
-document.getElementById('btnShare').addEventListener('click', () => {
-  const url = encodeURIComponent(window.location.href);
-  const title = encodeURIComponent("Check out this awesome residential stud wall calculator!");
-  // Defaulting to LinkedIn share
-  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
+$('btnShare').addEventListener('click', function() {
+  navigator.clipboard.writeText(location.href)
+    .then(function() { showToast(currentExportData ? "Link copied — it opens with these inputs filled in" : "Link copied"); })
+    .catch(function() { showToast("Couldn't access clipboard"); });
 });
 
-document.getElementById('btnEmbed').addEventListener('click', () => {
-  const url = window.location.href;
-  const iframeCode = `<iframe src="${url}" width="100%" height="800px" style="border:1px solid #ccc; border-radius:12px;"></iframe>`;
-  navigator.clipboard.writeText(iframeCode).then(() => showToast("Embed code copied!"));
+$('btnEmbed').addEventListener('click', function() {
+  const url = location.origin + location.pathname;
+  const iframeCode = '<iframe src="' + url + '" width="100%" height="900" style="border:1px solid #ccc; border-radius:12px;" title="Load-Bearing Wall Calculator — Oasis Engineering"></iframe>';
+  navigator.clipboard.writeText(iframeCode)
+    .then(function() { showToast("Embed code copied"); })
+    .catch(function() { showToast("Couldn't access clipboard"); });
 });
 
-// ── Feedback Functions ──
-document.getElementById('feedYes').addEventListener('click', function() {
+/* ── Feedback (hook a POST endpoint here when ready) ── */
+$('feedYes').addEventListener('click', function() {
   this.classList.add('active');
-  document.getElementById('feedNo').classList.remove('active');
-  // fetch('/api/feedback', { method: 'POST', body: JSON.stringify({ helpful: true }) });
+  $('feedNo').classList.remove('active');
   showToast("Thanks for the feedback!");
 });
-
-document.getElementById('feedNo').addEventListener('click', function() {
+$('feedNo').addEventListener('click', function() {
   this.classList.add('active');
-  document.getElementById('feedYes').classList.remove('active');
-  // fetch('/api/feedback', { method: 'POST', body: JSON.stringify({ helpful: false }) });
-  showToast("Thanks! We'll work to improve it.");
+  $('feedYes').classList.remove('active');
+  showToast("Thanks — we'll work to improve it.");
 });
 
-// ── Reference Table ──
+/* ── Reference table (axial only, CD = 1.0, sheathed) ── */
 function updateRefTable() {
-  const species = document.getElementById('woodSpecies').value;
-  const tbody = document.getElementById('refTableBody');
+  const species = $('woodSpecies').value;
+  const tbody = $('refTableBody');
   tbody.innerHTML = '';
 
-  SIZES.forEach(size => {
-    const calc = calcStud(size, species, 10, 1.0, true, 0, 0, 16); 
-    let row = `<tr><td>${size}</td>`;
-
-    [12, 16, 24].forEach(sp => {
-      const spacingFt = sp / 12;
-      const capacityStud = calc.FcPrime * calc.A;
-      const plf = capacityStud / spacingFt;
-      row += `<td>${Math.round(plf).toLocaleString()}</td>`;
+  SIZES.forEach(function(size) {
+    const calc = calcStud(size, species, 10, 1.0, true, 0, 0, 16);
+    let row = '<tr><td>' + size + '</td>';
+    [12, 16, 24].forEach(function(sp) {
+      const plf = (calc.FcPrimeA * calc.A) / (sp / 12);
+      row += '<td>' + Math.round(plf).toLocaleString() + '</td>';
     });
-
-    row += `</tr>`;
+    row += '</tr>';
     tbody.innerHTML += row;
   });
 }
 
-// ── Events ──
-document.getElementById('calcBtn').addEventListener('click', calculate);
-document.getElementById('resetBtn').addEventListener('click', resetAll);
-document.getElementById('breakdownToggle').addEventListener('click', toggleBreakdown);
-document.getElementById('woodSpecies').addEventListener('change', updateRefTable);
+/* ── Events / init ── */
+$('calcBtn').addEventListener('click', function() { calculate(); });
+$('resetBtn').addEventListener('click', resetAll);
+$('breakdownToggle').addEventListener('click', toggleBreakdown);
+$('woodSpecies').addEventListener('change', updateRefTable);
 
-document.querySelectorAll('input[type="number"]').forEach(el => {
-  el.addEventListener('keydown', e => {
+document.querySelectorAll('input[type="number"]').forEach(function(el) {
+  el.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') calculate();
   });
 });
 
 updateRefTable();
+loadUsageCount();
+if (applyParamsFromURL()) calculate({ countUsage: false });
 </script>
 </body>
 </html>
